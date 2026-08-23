@@ -48,7 +48,6 @@ include(SHARED_PATH . '/header.php'); ?>
   
   <main class="main-content">
     
-    <a href="javascript:history.back()" class="btn btn-primary" id="link_layout">
   <i class="bi bi-arrow-left"></i> Back
 </a>
     
@@ -145,7 +144,7 @@ include(SHARED_PATH . '/header.php'); ?>
           <td><?php if (!empty($staff['profile_image'])) { ?>
             <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -153,7 +152,7 @@ include(SHARED_PATH . '/header.php'); ?>
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
                  <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -228,7 +227,7 @@ include(SHARED_PATH . '/header.php'); ?>
           <td><?php if (!empty($staff['profile_image'])) { ?>
             <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -236,7 +235,7 @@ include(SHARED_PATH . '/header.php'); ?>
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
                  <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -310,7 +309,7 @@ include(SHARED_PATH . '/header.php'); ?>
           <td><?php if (!empty($staff['profile_image'])) { ?>
             <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -318,7 +317,7 @@ include(SHARED_PATH . '/header.php'); ?>
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
                  <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -393,7 +392,7 @@ include(SHARED_PATH . '/header.php'); ?>
           <td><?php if (!empty($staff['profile_image'])) { ?>
             <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -401,7 +400,7 @@ include(SHARED_PATH . '/header.php'); ?>
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
                  <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -475,7 +474,7 @@ include(SHARED_PATH . '/header.php'); ?>
           <td><?php if (!empty($staff['profile_image'])) { ?>
             <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -483,7 +482,7 @@ include(SHARED_PATH . '/header.php'); ?>
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
                  <?php if (($staff['status']) == 'active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($staff['status']) == 'inactive') { ?>
                  style=" border: 1.5px solid red;"

@@ -1,11 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
 
+const rootPath = (typeof WWW_ROOT !== 'undefined') ? WWW_ROOT : '/FUTA-HCMS/public';
+
 const images = [
-                "../assets/images/medicine-doctor-with-stethoscope-in-hand-on-hospital-background-medical-technology-healthcare-and-medical-concept-photo.jpg",
-                "../assets/images/stethoscope-pills-desk.jpg",
-                "../assets/images/61806.jpg",
-                "../assets/images/laptop-medical-equipment.jpg",
-                "../assets/images/a-serene-hospital-corridor-featuring-modern-design-plants-and-soft-lighting-creating-a-calming-atmosphere-photo.jpg"
+    rootPath + "/assets/images/medicine-doctor-with-stethoscope-in-hand-on-hospital-background-medical-technology-healthcare-and-medical-concept-photo.jpg",
+    rootPath + "/assets/images/stethoscope-pills-desk.jpg",
+    rootPath + "/assets/images/61806.jpg",
+    rootPath + "/assets/images/laptop-medical-equipment.jpg",
+    rootPath + "/assets/images/a-serene-hospital-corridor-featuring-modern-design-plants-and-soft-lighting-creating-a-calming-atmosphere-photo.jpg"
 ];
 const loginBg = document.getElementById("login-bg");
 

@@ -42,7 +42,6 @@ include(SHARED_PATH . '/header.php'); ?>
   
   <main class="main-content">
     
-    <a href="javascript:history.back()" class="btn btn-primary" id="link_layout">
   <i class="bi bi-arrow-left"></i> Back
 </a>
     

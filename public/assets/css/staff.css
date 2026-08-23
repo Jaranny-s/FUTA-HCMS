@@ -37,12 +37,46 @@ footer {
 /* NAVIGATION SIDEBAR */
 
 .navigation {
-width: 240px;
-background: red;
-min-width: 220px;
-max-width: 280px;
-height: 100%;
-flex-shrink: 0;
+    width: 240px;
+    background: #0F4E74; /* Matching the header blue */
+    min-width: 220px;
+    max-width: 280px;
+    height: 100vh;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    color: #e0e0e0;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-item i {
+    margin-right: 12px;
+    font-size: 1.2rem;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.nav-item.active {
+    background: #e53935; /* Reference bright red */
+    color: white;
+    font-weight: 600;
 }
 
 /* PAGE CONTENT */
@@ -51,19 +85,16 @@ flex-shrink: 0;
 #content {
     display: flex;
     width: 100%;
-    height: 80vh;
-    overflow-x: hidden;
-    margin-left: auto;
-    margin-right: auto;
-    background: #FFFFFF;
-    color: #666666;
+    min-height: 100vh;
+    background: #f4f7f6; /* Modern soft background */
+    color: #444;
 }
 
 /* White Page Section Beside (Without) Sidebar */
-main {
+main.main-content {
     flex: 1;
     min-width: 0;
-    padding: 1.5rem;
+    padding: 2.5rem;
     overflow-x: auto;
 }
 
@@ -71,126 +102,186 @@ main {
     width: 100%;
     display: flex;
     flex-direction: row;
+    align-items: baseline;
+    margin-bottom: 25px;
 }
 
 .top-head {
-    font-size: 30px;
-    margin: 5px 10px;
-    margin-right: 0;
-    padding: 15px;
-    padding-right: 5px;
+    font-size: 32px;
+    font-weight: 300;
+    color: #444;
+    margin: 0 10px 0 0;
 }
 
 .top-description {
-    font-size: 14px;
-    padding: 15px;
-    padding-left: 0;
-    margin-top: 17px;
-}
-
-.top img {
-    margin-left: auto;
-    border: 1px solid;
+    font-size: 15px;
+    color: #999;
+    margin: 0;
 }
 
 .role-head {
     font-size: 20px;
-    color: black;
-    text-align: center;
-    margin: 10px;
+    color: #333;
+    margin-bottom: 20px;
+    font-weight: 600;
 }
 
-.above-tabs {
-    margin: 20px 30px;
-    display: flex;
-    flex-direction: row;
-}
-
-#link_layout {
-    color: white;
-    background: #615cff; 
-    border: 1px solid #615cff;
-    padding: 4px 10px;
+/* Buttons */
+.btn, #link_layout {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
     text-decoration: none;
-    font-size: 15px;
-}
-
-#link_layout:hover {
-    background: #615cff;
-    border: 1px solid #63e3ff;
-    color: #63e3ff;
-    font-weight: bold;
-}
-
-
-.tabs button {
-    background: transparent;
-    justify-content: flex-start;
-    margin: 0;
-    margin-bottom: -0.5px;
-    padding: 10px 15px;
-    color: #1570A6;
+    cursor: pointer;
+    transition: all 0.2s ease;
     border: none;
 }
 
-.tabs button:first-child {
-    margin-left: 35px;
+.btn-primary, #link_layout {
+    background: #0F4E74;
+    color: white;
+}
+
+.btn-primary:hover, #link_layout:hover {
+    background: #1570A6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(15, 78, 116, 0.2);
+}
+
+.add-staff {
+    display: inline-block;
+    background: #0F4E74;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    margin-bottom: 20px;
+    transition: background 0.2s;
+}
+.add-staff:hover {
+    background: #1570A6;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.tabs button {
+    background: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-size: 15px;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.tabs button:hover {
+    color: #0F4E74;
 }
 
 .tabs .active {
-    color: black;
-    background: white;
-    border: 1px solid #666666;
-    border-top: 3px solid red;
-    border-bottom: 3px hidden #666666;
+    color: #0F4E74;
+    border-bottom: 3px solid #0F4E74;
 }
 
+#delete-tab-btn {
+    color: #ff6b6b;
+}
+#delete-tab-btn.active {
+    border-bottom: 3px solid #ff6b6b;
+}
+
+/* Content Area */
 .tab-content {
-    box-sizing: border-box;
-    border: 1px solid #666666;
-    margin-top: -0.5px;
-    max-width: 100%;
-    max-height: 400px;
-    overflow: auto;
-    padding: 5px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    padding: 25px;
+    margin-top: 20px;
 }
 
+/* Tables (Staff List, Patients, etc) */
+table.staff-list, table.encounter-list, table.inventory-list, .tab-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
 
+table.staff-list th, .tab-content table th {
+    text-align: left;
+    padding: 15px 10px;
+    border-bottom: 2px solid #eee;
+    color: #555;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+table.staff-list td, .tab-content table td {
+    padding: 15px 10px;
+    border-bottom: 1px solid #f5f5f5;
+    color: #444;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+table.staff-list tr:hover td, .tab-content table tr:hover td {
+    background: #f9f9fc;
+}
+
+.patient-profile-thumbnail {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Forms & DL Layouts */
 dl {
     display: flex;
     flex-direction: row;
+    align-items: center;
+    margin-bottom: 15px;
 }
 
 dl dt {
-    max-width: 80px;
+    width: 150px;
+    font-weight: 600;
+    color: #555;
+}
+
+dl dd {
+    flex: 1;
+    margin: 0;
 }
 
 dl input[type="text"],
 dl input[type="email"],
 dl input[type="password"] {
-    width: 200px;
+    width: 100%;
+    max-width: 300px;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     outline: none;
-    border: none;
-    border-bottom: 1px solid black;
-    color: black;
-}
-
-dl input[type="text"]:hover,
-dl input[type="email"]:hover,
-dl input[type="password"]:hover {
-    border-bottom: 2px solid red;
+    transition: all 0.2s;
+    font-size: 14px;
 }
 
 dl input[type="text"]:focus,
 dl input[type="email"]:focus,
 dl input[type="password"]:focus {
-    border-bottom: 2px solid #615cff;
-}
-
-dl input[type="text"]::placeholder,
-dl input[type="email"]::placeholder,
-dl input[type="password"]::placeholder {
-    font-size: 10px;
+    border-color: #0F4E74;
+    box-shadow: 0 0 0 3px rgba(15, 78, 116,0.1);
 }
 
 .errors {
@@ -205,9 +296,9 @@ dl input[type="password"]::placeholder {
 #logout-confirmation a {
     cursor: pointer;
     color: white;
-	background: #615cff;
-    border: 1px solid #615cff; 
-    background: #615cff;
+	background: #0F4E74;
+    border: 1px solid #0F4E74; 
+    background: #0F4E74;
     padding: 5px 20px;
     margin: 10px 15px;
     height: 10px;

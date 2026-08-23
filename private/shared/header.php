@@ -11,10 +11,10 @@
  <meta charset="utf-8">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap)" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-      <link rel="stylesheet" media="all" href="<?php echo url_wrap('/assets/css/staff.css'); ?>" />
+      <link rel="stylesheet" media="all" href="<?php echo url_wrap('/assets/css/staff.css?v=' . time()); ?>" />
     
     <?php if(isset($specificCss)) { ?>
-      <link rel="stylesheet" media="all" href="<?php echo url_wrap($specificCss); ?>" />
+      <link rel="stylesheet" media="all" href="<?php echo url_wrap($specificCss . '?v=' . time()); ?>" />
     <?php } ?>
   </head>
 

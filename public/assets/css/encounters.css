@@ -1,0 +1,184 @@
+/* encounters.css - Refined UI layout for Encounters module */
+
+/* General Layout & Cards */
+.main-content {
+    padding: 20px 40px;
+}
+
+.encounter-card, .patient-summary-card, .card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.2rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* Patient Summary Top Card */
+.patient-summary-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.patient-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.workspace-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #eee;
+}
+
+.patient-info .details h2 {
+    margin: 0 0 5px 0;
+    color: #222;
+}
+
+.patient-info .details p {
+    margin: 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.encounter-status {
+    text-align: right;
+}
+
+/* Badges */
+.badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+}
+.status-waiting { background-color: #fff3cd; color: #856404; }
+.status-in-progress { background-color: #cce5ff; color: #004085; }
+.status-completed { background-color: #d4edda; color: #155724; }
+.status-cancelled { background-color: #f8d7da; color: #721c24; }
+.status-provisional { background-color: #fff3cd; color: #856404; }
+.status-confirmed { background-color: #d4edda; color: #155724; }
+.priority-emergency { background-color: #f8d7da; color: #721c24; }
+.priority-urgent { background-color: #fff3cd; color: #856404; }
+.priority-normal, .priority-routine { background-color: #e2e3e5; color: #383d41; }
+
+/* Tabs Navigation */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    background: #f4f4f4;
+    color: #333;
+}
+
+.tab-btn.active {
+    background: #0F4E74;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(15, 78, 116, 0.3);
+}
+
+/* Tab Content Visibility */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Forms & Grids */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.clinical-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #444;
+    font-size: 0.9rem;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus, .form-group select:focus, textarea:focus {
+    outline: none;
+    border-color: #0F4E74;
+    box-shadow: 0 0 0 3px rgba(15, 78, 116, 0.1);
+}
+
+/* Buttons */
+.btn {
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+.btn:active {
+    transform: scale(0.98);
+}
+.btn-primary:hover {
+    box-shadow: 0 4px 12px rgba(15, 78, 116, 0.3);
+}
+
+/* Encounter List Table */
+.encounter-list-container {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}

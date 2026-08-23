@@ -60,8 +60,8 @@ overflow: hidden;
 
 #submit-response input {
     color: white;
-    background: #615cff; 
-    border: 1px solid #615cff;
+    background: #0F4E74; 
+    border: 1px solid #0F4E74;
     margin: 15px auto;
     padding: 3px;
     width: 60%;
@@ -69,7 +69,7 @@ overflow: hidden;
 }
 
 #submit-response input:hover {
-    background: #615cff;
+    background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;

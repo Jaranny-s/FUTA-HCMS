@@ -45,7 +45,6 @@ include(SHARED_PATH . '/header.php'); ?>
   
   <main class="main-content">
     
-    <a href="javascript:history.back()" class="btn btn-primary" id="link_layout">
   <i class="bi bi-arrow-left"></i> Back
 </a>
     
@@ -136,7 +135,7 @@ include(SHARED_PATH . '/header.php'); ?>
           <td> <?php if (!empty($patient['profile_image'])) { ?>
             <img src="<?php echo url_wrap('modules/patients/images/patient_pictures/' . v_wrap(ru_wrap($patient['profile_image']))); ?>" alt="Patient profile photo" class="patient-profile-thumbnail"
                 <?php if (($patient['status']) == 'Active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($patient['status']) == 'Inactive') { ?>
                  style=" border: 1.5px solid red;"
@@ -150,7 +149,7 @@ include(SHARED_PATH . '/header.php'); ?>
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage));?>" alt="No Patient photo uploaded" class="patient-profile-thumbnail"
                  <?php if (($patient['status']) == 'Active') { ?>
-                 style=" border: 1.5px solid #615cff;"
+                 style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
                  <?php if (($patient['status']) == 'Inactive') { ?>
                  style=" border: 1.5px solid red;"

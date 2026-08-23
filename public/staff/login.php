@@ -58,7 +58,7 @@ if(is_post_request()) {
 <title><?php echo v_wrap($page_title); ?> | FUTA Health Centre Management System</title>
  <meta charset="utf-8">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap)" rel="stylesheet" />
-      <link rel="stylesheet" media="all" href="<?php echo url_wrap('/assets/css/login.css'); ?>" />
+      <link rel="stylesheet" media="all" href="<?php echo url_wrap('/assets/css/login.css?v=' . time()); ?>" />
   </head>
 
   <body>
@@ -80,6 +80,13 @@ if(is_post_request()) {
          <div><span><i class="bi bi-lock"></i>
            <input type="password" name="password" value="" placeholder="Password"/></span></div>
         
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin:15px auto 0 auto; width:65%; color:#555;">
+          <label style="display:flex; align-items:center; gap:5px;">
+              <input type="checkbox" name="remember"> Remember me
+          </label>
+          <a href="#" style="color:#0F4E74; text-decoration:none;" onclick="alert('Password reset link would be sent to your email.')">Forgotten Password?</a>
+      </div>
+        
       <div class="errors">
         <?php echo display_errors($errors); ?></div>
         
@@ -95,6 +102,7 @@ if(is_post_request()) {
       
     </div>
     
-    <script src="<?php echo url_wrap('/assets/js/login.js'); ?>"></script>
+    <script>const WWW_ROOT = "<?php echo WWW_ROOT; ?>";</script>
+    <script src="<?php echo url_wrap('/assets/js/login.js?v=' . time()); ?>"></script>
   </body>
 </html>

@@ -5,8 +5,8 @@
 
 #submit-response input {
     color: white;
-    background: #615cff; 
-    border: 1px solid #615cff;
+    background: #0F4E74; 
+    border: 1px solid #0F4E74;
     margin: 15px auto;
     padding: 3px;
     width: 300px;
@@ -14,7 +14,7 @@
 }
 
 #submit-response input:hover {
-    background: #615cff;
+    background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;
@@ -22,8 +22,8 @@
 
 #submit-response button {
     color: white;
-    background: #615cff; 
-    border: 1px solid #615cff;
+    background: #0F4E74; 
+    border: 1px solid #0F4E74;
     margin: 15px auto;
     padding: 3px;
     width: 300px;
@@ -31,7 +31,7 @@
 }
 
 #submit-response button:hover {
-    background: #615cff;
+    background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;
@@ -39,8 +39,8 @@
 
 #admin-password-reset button {
     color: white;
-    background: #615cff; 
-    border: 1px solid #615cff;
+    background: #0F4E74; 
+    border: 1px solid #0F4E74;
     margin: 15px auto;
     padding: 3px;
     width: 300px;
@@ -48,7 +48,7 @@
 }
 
 #admin-password-reset button:hover {
-    background: #615cff;
+    background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;
@@ -67,8 +67,8 @@
 
 .ajax-message.success {
   background: white;
-  color: #615cff;
-  border: 2px solid #615cff;
+  color: #0F4E74;
+  border: 2px solid #0F4E74;
 }
 
 .ajax-message.error {
@@ -79,8 +79,8 @@
 
 #filterBtn {
 	color: white;
-	background: #615cff; 
-	border: 1px solid #615cff; 
+	background: #0F4E74; 
+	border: 1px solid #0F4E74; 
 	margin: 5px;
 	padding: 3px;
 	width: 60px;
@@ -89,26 +89,13 @@
 
 
 #filterBtn:hover {
-	background: #615cff;
+	background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;	
 }
 
-.staff-list th {
-   color: white;
-    background: #615cff;
-    border: 1px solid #615cff;
-    padding: 2px 3px;
-}
 
-.staff-list td {
-    border-bottom: 1px solid #615cff;
-    padding: 1px 3px;
-    max-width: 150px;
-    max-height: 20px;
-    overflow: clip;
-}
 
 /* =========================================
    PHOTO THUMBNAIL

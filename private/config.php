@@ -31,6 +31,10 @@ define("WWW_ROOT", $doc_root);
     require_once('query_functions.php');
     require_once('log_action.php');
     require_once('auth.php');
+    require_once('encounter_functions.php');
+    require_once('pharmacy_functions.php');
+    require_once('student_auth.php');
+    require_once('student_functions.php');
     
 
     $db_1 = db_connect(); // opens the database connection

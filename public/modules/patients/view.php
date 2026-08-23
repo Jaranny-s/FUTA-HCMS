@@ -153,6 +153,12 @@ include(SHARED_PATH . '/header.php');
                 </span>
             </div>
             
+            <div style="text-align: right;">
+                <a href="<?php echo url_wrap('/modules/reception/check_in.php?patient_id=' . $patient['id']); ?>" class="btn btn-primary" style="background:#1bc03d; color:white; border:none; padding:10px 15px; border-radius:5px; text-decoration:none;">
+                    <i class="bi bi-calendar-check"></i> Check-in Patient
+                </a>
+            </div>
+            
         </div>
 
 

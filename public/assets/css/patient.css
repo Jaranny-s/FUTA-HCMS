@@ -22,7 +22,7 @@ height:100%;
 
 width:0;
 
-background:#615cff;
+background:#0F4E74;
 
 transition:.3s;
 
@@ -70,7 +70,7 @@ transition:.3s;
 .wizard-buttons .btn,
 .review-submit-btn,
 #link_layout {
-    background-color: #615cff;
+    background-color: #0F4E74;
     color: #fff;
     border: none;
     padding: 10px 18px;
@@ -83,7 +83,7 @@ transition:.3s;
 .review-submit-btn:hover,
 #link_layout:hover {
     opacity: 0.9;
-    background: #615cff;
+    background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;
@@ -103,7 +103,7 @@ transition:.3s;
 .patient-profile-image {
     width: 120px;
     height: 120px;
-    border: 2px solid #615cff;
+    border: 2px solid #0F4E74;
     border-radius: 50%;
     object-fit: cover;
     display: block;
@@ -133,7 +133,7 @@ transition:.3s;
 }
 
 .review-edit {
-    background-color: #615cff;
+    background-color: #0F4E74;
     color: #fff;
     text-decoration: none;
     padding: 7px 13px;
@@ -142,7 +142,7 @@ transition:.3s;
 
 .review-edit:hover {
     opacity: 0.9;
-    background: #615cff;
+    background: #0F4E74;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;
@@ -350,7 +350,7 @@ transition:.3s;
     width: 120px;
     height: 120px;
 
-    border: 2px solid #615cff;
+    border: 2px solid #0F4E74;
     border-radius: 50%;
 
     object-fit: cover;
