@@ -1,0 +1,125 @@
+html, body {
+    width: 100%;
+    max-height: 100vh;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 50;
+}
+
+/* LOGIN PAGE INFORMATION */
+#login-bg {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    min-height: 100vh;
+    background-color: #0b3c5d;
+    overflow: hidden;
+    /*z-index: -1;
+    background-image: url(../images/medicine-doctor-with-stethoscope-in-hand-on-hospital-background-medical-technology-healthcare-and-medical-concept-photo.jpg); */
+}
+
+.bg-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+    z-index: 0;
+    
+}
+
+.bg-slide.active {
+    opacity: 1;
+}
+
+.login-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0, 0.4);
+    z-index: 1;
+}
+
+.header-img {
+    position: relative;
+    z-index: 1;
+}
+
+.login-form {
+    position: relative;
+    z-index: 1;
+    background: white;
+    margin: 0 auto;
+    width: 400px;
+    height: 400px;
+    text-align: center;
+}
+
+.login-form p:first-of-type {
+    font-size: 25px;   
+}
+
+.login-form p {
+    font-size: 13px;
+}
+
+.login-form div {
+    align-items: center;
+    justify-content: center;
+
+}
+
+.login-form span {
+    position: relative;
+    top: 1.5px;
+    color: #666666;
+    height: 30px;
+    border: 1px solid #666666;
+    border-left: 3px solid green;
+    padding: 9px 2px;
+}
+
+.login-form input {
+    color: #666666;
+    outline: none;
+    border: none;
+    margin: 10px 0;
+    margin-left: -3px;
+    width: 65%;
+    height: 30px;
+}
+
+#submit-response input {
+    color: white;
+    background: #615cff; 
+    border: 1px solid #615cff;
+    margin: 15px auto;
+    padding: 3px;
+    width: 60%;
+    height: 30px;
+}
+
+#submit-response input:hover {
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+.footnote {
+    color: #63e3ff;
+    position: relative;
+    z-index: 1;
+    margin-top: 20px;
+    width: 300px;
+    text-align: center;
+}
+
+.footnote p {
+    font-size: 13px;
+}
+
+.errors {
+    color: red;
+}

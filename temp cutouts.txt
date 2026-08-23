@@ -1,0 +1,281 @@
+<?php echo v_wrap($staff_type); ?> // for the staff role titles in line 9 of public/staff/index.php
+
+<?php echo // display_session_message(); ?> // for the display of session messages in line 28 of header.php
+
+<ul>
+            <li>User: <?php echo $_SESSION['username'] ?? ''; ?></li>
+            <li><a href="<?php echo url_wrap('/staff/index.php'); ?>">Menu</a></li>
+            <li><a href="<?php echo url_wrap('/staff/logout.php'); ?>">Logout</a></li>
+
+          </ul>
+          // for the header navigation options in header.php
+          
+          
+          
+         $staff_set = find_all_staff();
+            while($role = $staff_set->fetch_assoc()) {
+                  echo "<option value=\"" . v_wrap($staff['id']) . "\"";
+                  if($staff['role']) {
+                      echo " selected";
+                  }
+                  echo ">" . v_wrap($staff['role']) . "</option>";
+             } // select roles from all available roles in staff/edit.php
+             
+             
+              
+    
+   FUTA Health Centre Management System // former absolute name of site;
+    
+    
+    $patient = find_all_patients(); // while($patient = $admin->fetch_assoc()) { ?>
+    
+    <td><?php if (hasPermission('view_appointments')) { ?><a class="edit-patient" href="<?php echo url_wrap('/patient/appointments.php?id=' . v_wrap(u_wrap($patient['id']))); ?>"><i class="bi bi-calendar-check"></i></a><?php } ?></td>              // the appointment column in patient index page
+
+
+
+<?php
+require_once('../../../private/config.php');
+require_once(PRIVATE_PATH.'/data/countries.php');
+require_once(PRIVATE_PATH.'/data/nigerian_states.php');
+require_once(PRIVATE_PATH.'/data/nigerian_lgas.php');
+
+require_password_reset();
+
+if (!hasPermission('create_patient')) {
+    redirect_to(url_wrap('/staff/dashboard.php'));
+}
+
+$page_title = "Register Patient";
+$specificCss = "/assets/css/patient.css";
+
+include(SHARED_PATH . '/header.php');
+
+
+
+?>
+
+<div id="content">
+
+<?php include(SHARED_PATH . '/navigation.php'); ?>
+
+<main class="main-content">
+
+<a href="javascript:history.back()" class="btn btn-primary" id="link_layout">
+    <i class="bi bi-arrow-left"></i> Back
+</a>
+
+<div class="top">
+    <p class="top-head">Patient Registration</p>
+    <p class="top-description">
+        Register a new patient into the Hospital Management System.
+    </p>
+</div>
+
+<?php
+echo display_session_message();
+echo display_errors($errors ?? []);
+?>
+
+<form action="<?php echo url_wrap('/patient/create.php'); ?>"
+      method="post"
+      enctype="multipart/form-data"
+      id="patient-form">
+    
+        <div class="wizard-progress">
+
+            <div class="step active" data-step="1">
+                <div class="circle">1</div>
+                <p>Basic</p>
+            </div>
+
+            <div class="line"></div>
+
+            <div class="step" data-step="2">
+                <div class="circle">2</div>
+                <p>Contact</p>
+            </div>
+
+            <div class="line"></div>
+
+            <div class="step" data-step="3">
+                <div class="circle">3</div>
+                <p>University</p>
+            </div>
+
+            <div class="line"></div>
+
+            <div class="step" data-step="4">
+                <div class="circle">4</div>
+                <p>Medical</p>
+            </div>
+
+            <div class="line"></div>
+
+            <div class="step" data-step="5">
+                <div class="circle">5</div>
+                <p>Emergency</p>
+            </div>
+
+        </div>
+    
+    <div class="form-step active" id="step-1">
+
+<h2>Basic Information</h2>
+
+<div class="form-grid">
+    
+    <div class="form-group">
+
+        <label>System Patient ID</label>
+
+        <input type="text" value="Automatically Generated" readonly>
+
+    </div>
+    
+    <div class="form-group">
+
+        <label for="surname">Surname <span class="required">*</span></label>
+
+        <input type="text" name="surname" id="surname" required>
+
+    </div>
+    
+    <div class="form-group">
+
+        <label for="first_name">First Name <span class="required">*</span></label>
+
+        <input type="text" name="first_name" id="first_name" required>
+
+    </div>
+    
+    <div class="form-group">
+
+        <label for="middle_name">Middle Name</label>
+
+        <input type="text" name="middle_name" id="middle_name">
+
+    </div>
+    
+    <div class="form-group">
+
+        <label for="gender">Gender<span class="required">*</span></label>
+
+        <select name="gender" id="gender" required>
+
+            <option value="">Select</option>
+
+            <option value="Male">Male</option>
+
+        <option value="Female">Female</option>
+
+        </select>
+
+    </div>
+    
+    <div class="form-group">
+
+        <label for="date_of_birth">Date of Birth</label>
+
+        <input type="date" name="date_of_birth" id="date_of_birth">
+
+    </div>
+    
+    <div class="form-group">
+
+        <label>Age</label>
+
+        <input type="text" id="age" readonly>
+
+    </div>
+    
+    <div class="form-group">
+
+        <label for="nationality">Nationality</label>
+
+        <select name="nationality" id="nationality">
+
+            <option value="">Select Nationality</option>
+
+        <?php foreach($countries as $country){ ?>
+
+            <option value="<?php echo $country; ?>">
+
+        <?php echo $country; ?>
+
+            </option>
+
+        <?php } ?>
+
+        </select>
+
+        <select name="state_of_origin" id="state">
+
+            <option value="">Select State</option>
+
+        <?php foreach($states as $state){ ?>
+
+            <option value="<?php echo $state; ?>"><?php echo $state; ?></option>
+
+        <?php } ?>
+
+        </select>
+
+        <select name="lga" id="lga">
+
+            <option value="">Select LGA</option>
+
+        </select>
+        
+    </div>
+    
+    <div class="form-group">
+
+        <label>Marital Status</label>
+
+        <select name="marital_status">
+
+            <option value="">Select</option>
+
+            <option>Single</option>
+
+            <option>Married</option>
+
+            <option>Divorced</option>
+
+            <option>Widowed</option>
+
+        </select>
+
+    </div>
+    
+    <div class="form-group">
+
+        <label>Patient Category</label>
+
+        <select name="patient_category" id="patient_category" required>
+
+            <option value="">Select</option>
+
+            <option value="Student">Student</option>
+
+            <option value="Staff">Staff</option>
+
+            <option value="Dependant">Dependant</option>
+
+            <option value="External">External</option>
+
+        </select>
+
+    </div>
+    
+</div>
+        
+<div class="wizard-buttons">
+
+<a href="<?php echo url_wrap('/modules/patients/index.php'); ?>" class="btn btn-secondary">Cancel</a>
+
+<button type="button" class="next-btn">Next →</button>
+
+</div>
+
+</div>

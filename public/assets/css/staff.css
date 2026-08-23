@@ -1,0 +1,231 @@
+/*
+ * #0F4E74 - header blue;
+ * #1570A6 - thicker blue;
+ * #63e3ff - footer text blue;
+ *  */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    max-height: 100vh;
+    box-sizing: border-box;
+    background: #1570A6;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 100;
+}
+
+header {
+    display: flex;
+    flex-direction: row;
+    background: #0F4E74;
+    color: white;
+    padding: 10px 5px;
+}
+
+footer {
+    background: #1570A6;
+    color: #63e3ff;
+    padding: 5px 0;
+}
+
+
+/* NAVIGATION SIDEBAR */
+
+.navigation {
+width: 240px;
+background: red;
+min-width: 220px;
+max-width: 280px;
+height: 100%;
+flex-shrink: 0;
+}
+
+/* PAGE CONTENT */
+
+/* Full White Page Section + Sidebar */
+#content {
+    display: flex;
+    width: 100%;
+    height: 80vh;
+    overflow-x: hidden;
+    margin-left: auto;
+    margin-right: auto;
+    background: #FFFFFF;
+    color: #666666;
+}
+
+/* White Page Section Beside (Without) Sidebar */
+main {
+    flex: 1;
+    min-width: 0;
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+
+.top {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.top-head {
+    font-size: 30px;
+    margin: 5px 10px;
+    margin-right: 0;
+    padding: 15px;
+    padding-right: 5px;
+}
+
+.top-description {
+    font-size: 14px;
+    padding: 15px;
+    padding-left: 0;
+    margin-top: 17px;
+}
+
+.top img {
+    margin-left: auto;
+    border: 1px solid;
+}
+
+.role-head {
+    font-size: 20px;
+    color: black;
+    text-align: center;
+    margin: 10px;
+}
+
+.above-tabs {
+    margin: 20px 30px;
+    display: flex;
+    flex-direction: row;
+}
+
+#link_layout {
+    color: white;
+    background: #615cff; 
+    border: 1px solid #615cff;
+    padding: 4px 10px;
+    text-decoration: none;
+    font-size: 15px;
+}
+
+#link_layout:hover {
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+
+.tabs button {
+    background: transparent;
+    justify-content: flex-start;
+    margin: 0;
+    margin-bottom: -0.5px;
+    padding: 10px 15px;
+    color: #1570A6;
+    border: none;
+}
+
+.tabs button:first-child {
+    margin-left: 35px;
+}
+
+.tabs .active {
+    color: black;
+    background: white;
+    border: 1px solid #666666;
+    border-top: 3px solid red;
+    border-bottom: 3px hidden #666666;
+}
+
+.tab-content {
+    box-sizing: border-box;
+    border: 1px solid #666666;
+    margin-top: -0.5px;
+    max-width: 100%;
+    max-height: 400px;
+    overflow: auto;
+    padding: 5px;
+}
+
+
+dl {
+    display: flex;
+    flex-direction: row;
+}
+
+dl dt {
+    max-width: 80px;
+}
+
+dl input[type="text"],
+dl input[type="email"],
+dl input[type="password"] {
+    width: 200px;
+    outline: none;
+    border: none;
+    border-bottom: 1px solid black;
+    color: black;
+}
+
+dl input[type="text"]:hover,
+dl input[type="email"]:hover,
+dl input[type="password"]:hover {
+    border-bottom: 2px solid red;
+}
+
+dl input[type="text"]:focus,
+dl input[type="email"]:focus,
+dl input[type="password"]:focus {
+    border-bottom: 2px solid #615cff;
+}
+
+dl input[type="text"]::placeholder,
+dl input[type="email"]::placeholder,
+dl input[type="password"]::placeholder {
+    font-size: 10px;
+}
+
+.errors {
+    color: red;
+}
+
+#logout-confirmation {
+    padding: 15px 5px;
+    margin: 5px;
+}
+
+#logout-confirmation a {
+    cursor: pointer;
+    color: white;
+	background: #615cff;
+    border: 1px solid #615cff; 
+    background: #615cff;
+    padding: 5px 20px;
+    margin: 10px 15px;
+    height: 10px;
+}
+#staff-view {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    
+}
+.staff-profile-header {
+    width: 180px;
+    height: 180px;
+    border: 2px solid;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin-right: 30px;
+}

@@ -1,0 +1,575 @@
+/*
+ * Patient View
+ * FUTA HCMS
+ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+.main-content {
+    min-width: 0;
+}
+
+
+/* =========================================================
+   PATIENT SUMMARY
+========================================================= */
+
+.patient-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+
+    margin: 15px 30px 20px;
+    padding: 12px 15px;
+
+    border: 1px solid #615cff;
+    background: white;
+}
+
+
+.patient-summary div {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+}
+
+
+.patient-summary strong {
+    font-size: 12px;
+    color: #615cff;
+    margin-bottom: 4px;
+}
+
+
+.patient-summary span {
+    color: red;
+    font-size: 15px;
+}
+
+.patient-profile-header {
+    width: 180px;
+    height: 180px;
+    border: 2px solid #615cff;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 0;
+}
+
+/* =========================================================
+   TABS
+========================================================= */
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+
+.tabs button {
+    background: transparent;
+
+    margin: 0;
+    margin-bottom: -0.5px;
+
+    padding: 10px 15px;
+
+    color: #1570A6;
+
+    border: none;
+
+    cursor: pointer;
+
+    font-family: inherit;
+    font-size: 14px;
+}
+
+
+.tabs button:first-child {
+    margin-left: 35px;
+}
+
+
+.tabs button:hover {
+    color: #615cff;
+}
+
+
+.tabs .active {
+    color: black;
+
+    background: white;
+
+    border: 1px solid #666666;
+
+    border-top: 3px solid red;
+
+    border-bottom: 3px hidden #666666;
+}
+
+
+/* =========================================================
+   TAB CONTENT
+========================================================= */
+
+.tab-content {
+    box-sizing: border-box;
+
+    border: 1px solid #666666;
+
+    margin-top: -0.5px;
+
+    max-width: 100%;
+    max-height: 500px;
+
+    overflow: auto;
+
+    padding: 20px 30px;
+
+    background: white;
+}
+
+.tab-content h3 {
+    margin-top: 5px;
+    margin-bottom: 20px;
+
+    color: #1570A6;
+
+    font-size: 18px;
+}
+
+
+.tab-content hr {
+    margin: 25px 0;
+
+    border: none;
+
+    border-top: 1px solid #dddddd;
+}
+
+
+/* =========================================================
+   INFORMATION ROWS
+========================================================= */
+
+.tab-content dl {
+    display: flex;
+
+    flex-direction: row;
+
+    align-items: flex-start;
+
+    margin: 0;
+
+    padding: 9px 5px;
+
+    border-bottom: 1px solid #eeeeee;
+}
+
+
+.tab-content dl:last-child {
+    border-bottom: none;
+}
+
+
+.tab-content dt {
+    width: 190px;
+    min-width: 190px;
+
+    margin: 0;
+
+    padding-right: 20px;
+
+    font-weight: bold;
+    color: #555555;
+}
+
+
+.tab-content dd {
+    margin: 0;
+
+    color: #111111;
+
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   EMPTY INFORMATION
+========================================================= */
+
+.tab-content p {
+    padding: 15px;
+
+    color: #666666;
+}
+
+
+/* =========================================================
+   BACK BUTTON
+========================================================= */
+
+#link_layout {
+    color: white;
+
+    background: #615cff;
+
+    border: 1px solid #615cff;
+
+    padding: 4px 10px;
+
+    text-decoration: none;
+
+    font-size: 15px;
+}
+
+
+#link_layout:hover {
+    background: #615cff;
+
+    border: 1px solid #63e3ff;
+
+    color: #63e3ff;
+
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .patient-summary {
+        margin-left: 10px;
+        margin-right: 10px;
+        gap: 15px;
+    }
+
+    .tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .tabs button {
+        white-space: nowrap;
+    }
+
+    .tabs button:first-child {
+        margin-left: 10px;
+    }
+
+    .tab-content {
+        padding: 15px;
+    }
+
+    .tab-content dl {
+        flex-direction: column;
+        gap: 5px;
+
+        padding: 12px 5px;
+    }
+
+    .tab-content dt {
+        width: auto;
+        min-width: 0;
+
+        padding-right: 0;
+
+        font-size: 14px;
+    }
+
+    .tab-content dd {
+        padding: 0;
+
+        font-size: 14px;
+        line-height: 1.5;
+    }
+}
+
+/* =========================================================
+   EDIT FORM
+========================================================= */
+
+.tab-content dl {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    margin: 0;
+    padding: 12px 10px;
+
+    border-bottom: 1px solid #eeeeee;
+}
+
+
+.tab-content dt {
+    width: 200px;
+    flex-shrink: 0;
+
+    font-weight: bold;
+    color: #555555;
+}
+
+
+.tab-content dd {
+    margin: 0;
+
+    flex: 1;
+
+    padding-left: 25px;
+}
+
+
+.tab-content input,
+.tab-content select {
+    width: 250px;
+
+    padding: 7px 8px;
+
+    border: none;
+    border-bottom: 1px solid #777777;
+
+    background: transparent;
+
+    color: #111111;
+
+    font-family: inherit;
+
+    outline: none;
+}
+
+
+.tab-content input:focus,
+.tab-content select:focus {
+    border-bottom: 2px solid #615cff;
+}
+
+
+.tab-content input:hover,
+.tab-content select:hover {
+    border-bottom: 2px solid red;
+}
+
+
+/* =========================================================
+   EDIT ACTIONS
+========================================================= */
+
+.edit-actions {
+    display: flex;
+    gap: 10px;
+
+    margin-top: 20px;
+    padding: 15px 0;
+}
+
+
+.edit-actions button,
+.edit-actions a {
+    padding: 8px 15px;
+
+    font-family: inherit;
+    font-size: 14px;
+
+    text-decoration: none;
+    cursor: pointer;
+    outline: none;
+    
+    background: #615cff;
+    color: white;
+    border: 1px solid #615cff;
+}
+
+.edit-actions button:hover,
+.edit-actions a:hover {
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .tab-content dl {
+        flex-direction: column;
+        align-items: stretch;
+
+        gap: 6px;
+
+        padding: 12px 5px;
+    }
+
+
+    .tab-content dt {
+        width: auto;
+    }
+
+
+    .tab-content dd {
+        padding-left: 0;
+    }
+
+
+    .tab-content input,
+    .tab-content select {
+        width: 100%;
+        max-width: 100%;
+    }
+
+
+    .edit-actions {
+        flex-direction: column;
+    }
+
+
+    .edit-actions button,
+    .edit-actions a {
+        width: 100%;
+        text-align: center;
+    }
+
+}
+
+/* ============================================================
+   PRINCIPAL PATIENT SEARCH
+============================================================ */
+
+.principal-search {
+    position: relative;
+    width: 100%;
+}
+
+
+.principal-search-input {
+    position: relative;
+    width: 100%;
+}
+
+
+.principal-search-input i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #615cff;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+
+.principal-search-input input {
+    width: 100%;
+    padding: 10px 10px 10px 38px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+
+.principal-search-input input:focus {
+    outline: none;
+    border-color: #615cff;
+    box-shadow: 0 0 0 2px rgba(97, 92, 255, 0.15);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AJAX results
+|--------------------------------------------------------------------------
+*/
+
+.principal-search-results {
+    display: none;
+    width: 100%;
+    margin-top: 4px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    overflow: hidden;
+}
+
+
+.principal-result {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid #eee;
+    background: white;
+    color: #333;
+    text-align: left;
+    cursor: pointer;
+}
+
+
+.principal-result:hover {
+    background: #615cff;
+    color: white;
+}
+
+
+.no-principal-results {
+    padding: 10px 12px;
+    color: #666;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Selected principal
+|--------------------------------------------------------------------------
+*/
+
+.selected-principal-patient {
+    margin-top: 8px;
+}
+
+
+.selected-principal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #615cff;
+    border-radius: 6px;
+    background: white;
+    color: #333;
+}
+
+
+.clear-principal {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #615cff;
+    border-radius: 5px;
+    background: #615cff;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+
+
+.clear-principal:hover {
+    background: #63e3ff;
+    border-color: #63e3ff;
+}

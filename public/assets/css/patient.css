@@ -1,0 +1,426 @@
+.registration-progress{
+
+margin-bottom:30px;
+
+}
+
+.progress{
+
+height:10px;
+
+background:#ddd;
+
+border-radius:20px;
+
+overflow:hidden;
+
+}
+
+.progress-fill{
+
+height:100%;
+
+width:0;
+
+background:#615cff;
+
+transition:.3s;
+
+}
+
+/* =========================================
+   PATIENT REGISTRATION WIZARD
+   ========================================= */
+
+.main-content form {
+    margin-top: 25px;
+}
+
+.form-grid {
+    gap: 22px;
+}
+
+.form-group {
+    margin-bottom: 8px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 11px 13px;
+    box-sizing: border-box;
+}
+
+.wizard-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-top: 35px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+.wizard-buttons .btn,
+.review-submit-btn,
+#link_layout {
+    background-color: #615cff;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.wizard-buttons .btn:hover,
+.review-submit-btn:hover,
+#link_layout:hover {
+    opacity: 0.9;
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+
+/* =========================================
+   REVIEW PAGE
+   ========================================= */
+
+.review-description {
+    margin: 10px 0 25px;
+    line-height: 1.6;
+}
+
+
+.patient-profile-image {
+    width: 120px;
+    height: 120px;
+    border: 2px solid #615cff;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 15px auto;
+}
+
+.review-section {
+    margin-bottom: 25px;
+    padding: 22px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.review-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.review-section-header h3 {
+    margin: 0;
+}
+
+.review-edit {
+    background-color: #615cff;
+    color: #fff;
+    text-decoration: none;
+    padding: 7px 13px;
+    font-size: 13px;
+}
+
+.review-edit:hover {
+    opacity: 0.9;
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+.review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 25px;
+}
+
+.review-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.review-label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.review-value {
+    min-height: 20px;
+    padding: 9px 11px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    word-break: break-word;
+}
+
+.review-full-width {
+    grid-column: 1 / -1;
+}
+
+.review-subsection {
+    margin-top: 20px;
+}
+
+.review-subsection h4 {
+    margin-bottom: 15px;
+}
+
+.review-submit-box {
+    margin-top: 30px;
+    padding: 25px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.review-submit-box p {
+    margin-bottom: 20px;
+}
+
+.review-submit-btn {
+    min-width: 180px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   REVIEW PAGE - MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .review-description {
+        margin: 8px 0 20px;
+        line-height: 1.5;
+        font-size: 14px;
+    }
+
+
+    /* REVIEW SECTIONS */
+
+    .review-section {
+        margin-bottom: 18px;
+        padding: 15px;
+        border-radius: 6px;
+    }
+
+
+    /* SECTION HEADER */
+
+    .review-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+    }
+
+    .review-section-header h3 {
+        font-size: 17px;
+    }
+
+    .review-edit {
+        padding: 6px 11px;
+        font-size: 12px;
+    }
+
+
+    /* REVIEW GRID */
+
+    .review-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+
+    /* REVIEW ITEMS */
+
+    .review-item {
+        gap: 4px;
+    }
+
+    .review-label {
+        font-size: 12px;
+    }
+
+    .review-value {
+        min-height: 20px;
+
+        padding: 8px 10px;
+
+        font-size: 14px;
+
+        border-radius: 4px;
+    }
+
+
+
+    .review-full-width {
+        grid-column: auto;
+    }
+
+
+    /* SUBSECTIONS */
+
+    .review-subsection {
+        margin-top: 18px;
+    }
+
+    .review-subsection h4 {
+        margin-bottom: 12px;
+        font-size: 15px;
+    }
+
+
+    /* SUBMIT AREA */
+
+    .review-submit-box {
+        margin-top: 20px;
+        padding: 18px 15px;
+    }
+
+    .review-submit-box p {
+        margin-bottom: 15px;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .review-submit-btn {
+        width: 100%;
+        min-width: 0;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .review-section {
+        padding: 12px;
+    }
+
+    .review-section-header h3 {
+        font-size: 16px;
+    }
+
+    .review-value {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .review-submit-box {
+        padding: 15px 12px;
+    }
+}
+
+/* =========================================================
+   PATIENT PHOTO EDITOR
+========================================================= */
+
+.patient-photo-editor {
+    position: relative;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+}
+
+
+.patient-photo-editor .patient-profile-image {
+    width: 120px;
+    height: 120px;
+
+    border: 2px solid #615cff;
+    border-radius: 50%;
+
+    object-fit: cover;
+
+    display: block;
+
+    margin: 10px 0 15px;
+}
+
+
+.patient-photo-info {
+    margin-bottom: 10px;
+}
+
+
+.patient-photo-info p {
+    margin: 5px 0;
+    padding: 0;
+}
+
+
+.patient-photo-editor small {
+    display: block;
+    margin-top: 7px;
+    color: #666;
+}
+
+
+#open-registration-delete {
+    margin-top: 12px;
+}
+
+
+.photo-delete-confirm {
+    margin-top: 15px;
+    padding: 15px;
+
+    border: 1px solid #dc3545;
+    background: #fff5f5;
+}
+
+
+.photo-delete-confirm p {
+    margin: 0 0 15px;
+    padding: 0;
+    color: #333;
+}
+
+
+.photo-delete-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+
+.ajax-message {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 5px;
+}
+
+
+.ajax-message.success {
+    background: #e8f7ee;
+    color: #176b36;
+}
+
+
+.ajax-message.error {
+    background: #fdecec;
+    color: #a32121;
+}

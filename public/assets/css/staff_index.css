@@ -1,0 +1,13 @@
+.staff-list th {
+   color: white;
+    background: #615cff; 
+    border: 1px solid #615cff;
+    padding: 2px 4px;
+}
+
+.staff-list td {
+    border-bottom: 1px solid #615cff;
+    padding: 4px 3px;
+    max-width: 200px;
+    overflow: clip;
+}

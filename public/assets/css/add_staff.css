@@ -1,0 +1,125 @@
+.note-for-staff-id {
+    color: red;
+    font-style: italic;
+}
+
+#submit-response input {
+    color: white;
+    background: #615cff; 
+    border: 1px solid #615cff;
+    margin: 15px auto;
+    padding: 3px;
+    width: 300px;
+    height: 30px;
+}
+
+#submit-response input:hover {
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+#submit-response button {
+    color: white;
+    background: #615cff; 
+    border: 1px solid #615cff;
+    margin: 15px auto;
+    padding: 3px;
+    width: 300px;
+    height: 30px;
+}
+
+#submit-response button:hover {
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+#admin-password-reset button {
+    color: white;
+    background: #615cff; 
+    border: 1px solid #615cff;
+    margin: 15px auto;
+    padding: 3px;
+    width: 300px;
+    height: 30px;
+}
+
+#admin-password-reset button:hover {
+    background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;
+}
+
+#delete-tab-btn {
+  display: none;
+}
+
+.ajax-message {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.ajax-message.success {
+  background: white;
+  color: #615cff;
+  border: 2px solid #615cff;
+}
+
+.ajax-message.error {
+  background: #fdecea;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+}
+
+#filterBtn {
+	color: white;
+	background: #615cff; 
+	border: 1px solid #615cff; 
+	margin: 5px;
+	padding: 3px;
+	width: 60px;
+	height: 25px;
+}
+
+
+#filterBtn:hover {
+	background: #615cff;
+    border: 1px solid #63e3ff;
+    color: #63e3ff;
+    font-weight: bold;	
+}
+
+.staff-list th {
+   color: white;
+    background: #615cff;
+    border: 1px solid #615cff;
+    padding: 2px 3px;
+}
+
+.staff-list td {
+    border-bottom: 1px solid #615cff;
+    padding: 1px 3px;
+    max-width: 150px;
+    max-height: 20px;
+    overflow: clip;
+}
+
+/* =========================================
+   PHOTO THUMBNAIL
+   ========================================= */
+
+.patient-profile-thumbnail {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 2px auto;
+}
+
