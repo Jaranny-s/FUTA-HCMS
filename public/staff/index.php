@@ -3,9 +3,10 @@ require_once('../../private/config.php');
 
 require_password_reset();
 
-if (!hasPermission('create_staff')) {
+if (!hasPermission('view_staff')) {
     redirect_to(url_wrap('/staff/dashboard.php'));
 }
+
 
 ?>
 
@@ -48,9 +49,6 @@ include(SHARED_PATH . '/header.php'); ?>
   
   <main class="main-content">
     
-  <i class="bi bi-arrow-left"></i> Back
-</a>
-    
   <div class="top">
     <p class="top-head">Staff Records </p> 
     <p class="top-description">list of all health centre staff</p>
@@ -58,11 +56,57 @@ include(SHARED_PATH . '/header.php'); ?>
    
   
   <div id="ajax-message" class="ajax-message" hidden></div>
+  <div><?php echo display_session_message(); ?></div>
+  <?php if (isset($_SESSION['error'])) { echo "<div style='color:#d93025; background:#fce8e6; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #d93025;'>" . v_wrap($_SESSION['error']) . "</div>"; unset($_SESSION['error']); } ?>
 
 <?php if (hasPermission('view_staff')) { ?>
     
 <div class="above-tabs">
-  <a id="link_layout" class="add-staff" href="<?php echo url_wrap('/staff/new.php'); ?>"> + Add Staff</a>
+  <button data-modal-target="addStaffModal" class="add-staff" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:600;"> + Add Staff</button>
+</div>
+
+<!-- Add Staff Modal -->
+<div id="addStaffModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="modal-close" data-modal-close>&times;</button>
+        <h3 class="modal-title"><i class="bi bi-person-plus"></i> Add New Staff</h3>
+        
+        <form action="<?php echo url_wrap('/staff/new.php'); ?>" method="post" enctype="multipart/form-data">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Full Name *</label>
+                <input type="text" name="full_name" placeholder="Last name, First name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Email *</label>
+                <input type="email" name="email" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Role *</label>
+                <select name="role" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    <option value="" disabled selected>Select staff role</option>
+                    <option value="admin">Admin</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="nurse">Nurse</option>
+                    <option value="pharmacist">Pharmacist</option>
+                    <option value="receptionist">Receptionist</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Department *</label>
+                <input type="text" name="department" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Professional Headshot *</label>
+                <input type="file" name="profile_image" accept="image/*" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width: 100%;">Register Staff</button>
+        </form>
+    </div>
 </div>
     
 <?php } ?>
@@ -136,13 +180,13 @@ include(SHARED_PATH . '/header.php'); ?>
         
   	  </tr>
       <?php 
-      $admin = find_staff_by_role('admin');
+      $admin = find_admin_and_super_admin();
       
       while($staff = $admin->fetch_assoc()) { ?>
         
         <tr>
-          <td><?php if (!empty($staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+          <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -224,8 +268,8 @@ include(SHARED_PATH . '/header.php'); ?>
       while($staff = $admin->fetch_assoc()) { ?>
         
         <tr>
-          <td><?php if (!empty($staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+          <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -306,8 +350,8 @@ include(SHARED_PATH . '/header.php'); ?>
       while($staff = $admin->fetch_assoc()) { ?>
         
         <tr>
-          <td><?php if (!empty($staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+          <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -389,8 +433,8 @@ include(SHARED_PATH . '/header.php'); ?>
       while($staff = $admin->fetch_assoc()) { ?>
         
         <tr>
-          <td><?php if (!empty($staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+          <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -471,8 +515,8 @@ include(SHARED_PATH . '/header.php'); ?>
       while($staff = $admin->fetch_assoc()) { ?>
         
         <tr>
-          <td><?php if (!empty($staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+          <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>

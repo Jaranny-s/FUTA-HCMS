@@ -16,6 +16,7 @@
     <?php if(isset($specificCss)) { ?>
       <link rel="stylesheet" media="all" href="<?php echo url_wrap($specificCss . '?v=' . time()); ?>" />
     <?php } ?>
+    <link rel="stylesheet" media="all" href="<?php echo url_wrap('/assets/css/modal.css?v=' . time()); ?>" />
   </head>
 
   <body>

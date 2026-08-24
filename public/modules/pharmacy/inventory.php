@@ -2,6 +2,11 @@
 require_once('../../../private/config.php');
 require_password_reset();
 
+if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], ['pharmacist', 'admin', 'super_admin'])) {
+    $_SESSION['error'] = "Access Denied: You do not have permission to access drug inventory.";
+    redirect_to(url_wrap('/staff/dashboard.php'));
+}
+
 $page_title = "Pharmacy Inventory";
 $specificCss = "/assets/css/encounters.css"; // Reuse card layout
 
@@ -37,35 +42,44 @@ include(SHARED_PATH . '/header.php');
         <div><?php echo display_session_message(); ?></div>
 
         <div class="clinical-grid">
-            <div class="card">
-                <h3>Add New Drug</h3>
-                <form action="" method="post">
-                    <input type="hidden" name="action" value="add_drug">
-                    <div class="form-group">
-                        <label>Drug Name *</label>
-                        <input type="text" name="drug_name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Category *</label>
-                        <select name="category" required>
-                            <option value="Tablet">Tablet</option>
-                            <option value="Capsule">Capsule</option>
-                            <option value="Syrup">Syrup</option>
-                            <option value="Injection">Injection</option>
-                            <option value="Ointment">Ointment</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Unit Price (₦) *</label>
-                        <input type="number" step="0.01" name="unit_price" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Initial Stock *</label>
-                        <input type="number" name="stock_quantity" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">Add Drug</button>
-                </form>
+            <div class="card" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: none; box-shadow: none; padding: 0;">
+                <h3 style="margin: 0;">Current Inventory</h3>
+                <button data-modal-target="addDrugModal" class="btn btn-primary" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px;"><i class="bi bi-plus-lg"></i> Add New Drug</button>
+            </div>
+
+            <!-- Add Drug Modal -->
+            <div id="addDrugModal" class="modal-overlay">
+                <div class="modal-content">
+                    <button class="modal-close" data-modal-close>&times;</button>
+                    <h3 class="modal-title"><i class="bi bi-capsule"></i> Add New Drug</h3>
+                    <form action="" method="post">
+                        <input type="hidden" name="action" value="add_drug">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Drug Name *</label>
+                            <input type="text" name="drug_name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Category *</label>
+                            <select name="category" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="Tablet">Tablet</option>
+                                <option value="Capsule">Capsule</option>
+                                <option value="Syrup">Syrup</option>
+                                <option value="Injection">Injection</option>
+                                <option value="Ointment">Ointment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Unit Price (₦) *</label>
+                            <input type="number" step="0.01" name="unit_price" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Initial Stock *</label>
+                            <input type="number" name="stock_quantity" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width: 100%;">Add Drug</button>
+                    </form>
+                </div>
             </div>
             
             <div class="card" style="grid-column: span 2;">

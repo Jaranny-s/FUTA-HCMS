@@ -42,9 +42,6 @@ include(SHARED_PATH . '/header.php'); ?>
   
   <main class="main-content">
     
-  <i class="bi bi-arrow-left"></i> Back
-</a>
-    
   <div class="top">
     <p class="top-head">Activity Logs </p> 
     <p class="top-description">list of changes and important actions done</p>

@@ -9,7 +9,7 @@ function find_student_by_matric($matric_number) {
     return $query->get_result()->fetch_assoc();
 }
 
-function register_student($first_name, $surname, $email, $phone, $matric_number, $password) {
+function register_student($first_name, $surname, $email, $phone, $matric_number, $password, $profile_image = null) {
     global $db_1;
     
     // Generate a unique patient ID e.g. PAT-2026-0001
@@ -37,11 +37,11 @@ function register_student($first_name, $surname, $email, $phone, $matric_number,
     $gender = 'Male'; // Default or we could ask in form
     $dob = '2000-01-01'; // Default
     
-    $sql = "INSERT INTO patients (patient_id, first_name, surname, email, phone, matric_number, hashed_password, patient_category, registration_source, gender, date_of_birth, status) ";
-    $sql .= "VALUES (?, ?, ?, ?, ?, ?, ?, 'Student', 'Self Registration', ?, ?, 'Active')";
+    $sql = "INSERT INTO patients (patient_id, first_name, surname, email, phone, matric_number, hashed_password, patient_category, registration_source, gender, date_of_birth, status, profile_image) ";
+    $sql .= "VALUES (?, ?, ?, ?, ?, ?, ?, 'Student', 'Self Registration', ?, ?, 'Active', ?)";
     
     $query = $db_1->prepare($sql);
-    $query->bind_param("sssssssss", $new_patient_id, $first_name, $surname, $email, $phone, $matric_number, $hashed_password, $gender, $dob);
+    $query->bind_param("ssssssssss", $new_patient_id, $first_name, $surname, $email, $phone, $matric_number, $hashed_password, $gender, $dob, $profile_image);
     
     if ($query->execute()) {
         return $db_1->insert_id;
@@ -108,6 +108,48 @@ function book_student_appointment($patient_id, $date, $time, $type, $reason) {
     $query->bind_param("siiisss", $app_num, $patient_id, $doctor_id, $booked_by, $datetime, $type, $reason);
     $query->execute();
     return $db_1->insert_id;
+}
+
+function update_student_profile($patient_id, $phone, $email, $password = null) {
+    global $db_1;
+    if ($password) {
+        $hashed = password_hash($password, PASSWORD_BCRYPT);
+        $sql = "UPDATE patients SET phone = ?, email = ?, hashed_password = ? WHERE id = ?";
+        $q = $db_1->prepare($sql);
+        $q->bind_param("sssi", $phone, $email, $hashed, $patient_id);
+    } else {
+        $sql = "UPDATE patients SET phone = ?, email = ? WHERE id = ?";
+        $q = $db_1->prepare($sql);
+        $q->bind_param("ssi", $phone, $email, $patient_id);
+    }
+    return $q->execute();
+}
+
+function get_student_medical_records($patient_id) {
+    global $db_1;
+    $sql = "SELECT e.*, d.full_name as doctor_name 
+            FROM encounters e 
+            LEFT JOIN staff d ON e.doctor_id = d.id 
+            WHERE e.patient_id = ? AND e.status = 'Completed' 
+            ORDER BY e.created_at DESC";
+    $q = $db_1->prepare($sql);
+    $q->bind_param("i", $patient_id);
+    $q->execute();
+    return $q->get_result();
+}
+
+function get_student_prescriptions($patient_id) {
+    global $db_1;
+    $sql = "SELECT p.*, inv.drug_name 
+            FROM prescriptions p 
+            JOIN encounters e ON p.encounter_id = e.id 
+            LEFT JOIN pharmacy_inventory inv ON p.inventory_id = inv.id 
+            WHERE e.patient_id = ? 
+            ORDER BY p.created_at DESC";
+    $q = $db_1->prepare($sql);
+    $q->bind_param("i", $patient_id);
+    $q->execute();
+    return $q->get_result();
 }
 
 ?>

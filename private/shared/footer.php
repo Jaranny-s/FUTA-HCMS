@@ -9,7 +9,7 @@
 <script src="<?php echo url_wrap($specificJs); ?>"></script>
 
 <?php } ?>
-
+<script src="<?php echo url_wrap('/assets/js/modal.js?v=' . time()); ?>"></script>
   </body>
 </html>
 

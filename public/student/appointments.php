@@ -13,7 +13,7 @@ $page_title = 'My Appointments';
     <title><?php echo v_wrap($page_title); ?> - FUTA HCMS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../assets/css/student_portal.css">
+    <link rel="stylesheet" href="../assets/css/student_portal.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <header class="portal-header">
@@ -22,8 +22,15 @@ $page_title = 'My Appointments';
             FUTA HCMS Student Portal
         </div>
         <div class="user-menu">
-            <a href="dashboard.php" style="color:#555; text-decoration:none; margin-right:15px;">Dashboard</a>
-            <span><i class="bi bi-person-circle"></i> <?php echo v_wrap($student['first_name']); ?></span>
+            <a href="dashboard.php" style="margin-right:15px;">Dashboard</a>
+            <span>
+                <?php if (!empty($student['profile_image'])) { ?>
+                    <img src="<?php echo url_wrap('/modules/patients/images/patient_pictures/' . v_wrap($student['profile_image'])); ?>" alt="Profile" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 5px;">
+                <?php } else { ?>
+                    <i class="bi bi-person-circle" style="vertical-align: middle; margin-right: 5px;"></i>
+                <?php } ?>
+                <?php echo v_wrap($student['first_name']); ?>
+            </span>
         </div>
     </header>
 
@@ -52,7 +59,7 @@ $page_title = 'My Appointments';
                         </table>
                     <?php } else { ?>
                         <p style="color:#666; text-align: center; margin-top: 30px;">You have not booked any appointments yet.</p>
-                        <div style="text-align: center;"><a href="book.php" class="action-btn primary" style="display:inline-block; width:auto; padding:10px 20px;">Book Now</a></div>
+                        <div style="text-align: center;"><button data-modal-target="bookAppointmentModal" class="action-btn primary" style="display:inline-block; width:auto; padding:10px 20px; cursor:pointer; border:none; font-family:inherit;">Book Now</button></div>
                     <?php } ?>
 
                 </div>
@@ -62,5 +69,6 @@ $page_title = 'My Appointments';
 
         </div>
     </div>
+    <script src="../assets/js/modal.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

@@ -129,6 +129,24 @@ function find_staff_by_role($role, $search = null, $startDate = null, $endDate =
     return $result;
 }
 
+function find_admin_and_super_admin() {
+    global $db_1;
+    
+    $sql = "SELECT * FROM staff ";
+    $sql .= "WHERE role IN ('admin', 'super_admin') ";
+    $sql .= "ORDER BY created_at DESC ";
+    
+    $query = $db_1->prepare($sql);
+    confirm_query($query);
+    $query->execute();
+    
+    $result = $query->get_result();
+    confirm_result_set($result);
+    $query->close();
+    
+    return $result;
+}
+
 function total_page_count_for_staff($limit) {
 	global $db_1;
 	
@@ -335,17 +353,17 @@ function insert_staff($staff) {
     $system_staff_id = generate_staff_id();
     $temp_password = generate_temp_password();
     $hashed_password = password_hash($temp_password, PASSWORD_DEFAULT);
-    //$hashed_password = password_hash($staff['hashed_password'], PASSWORD_BCRYPT);
     $role_id = get_role_id($staff); 
+    $role_name = $staff['role']; // the enum value (e.g. 'doctor', 'nurse')
     
     $sql = "INSERT INTO staff ";
-    $sql .= "(system_staff_id, full_name, email, password, role_id, department, profile_image,password_reset_required) ";
+    $sql .= "(system_staff_id, full_name, email, password, role, role_id, department, profile_image, password_reset_required) ";
     $sql .= "VALUES ";
-    $sql .= "(?, ?, ?, ?, ?, ?, ?,?)";
+    $sql .= "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     $query = $db_1->prepare($sql);
     
-    $query->bind_param("ssssissi", $system_staff_id, $staff['full_name'], $staff['email'], $hashed_password, $role_id, $staff['department'], $staff['profile_image'], $staff['password_reset_required']);
+    $query->bind_param("sssssissi", $system_staff_id, $staff['full_name'], $staff['email'], $hashed_password, $role_name, $role_id, $staff['department'], $staff['profile_image'], $staff['password_reset_required']);
     $query->execute();
     
     $newId = $db_1->insert_id; // THIS is the real ID
@@ -374,12 +392,12 @@ function update_staff($staff) {
         return $errors;
     }
     
-    $hashed_password = password_hash($staff['hashed_password'], PASSWORD_BCRYPT);
-    
     $sql = "UPDATE staff SET ";
     $sql .= "full_name = ?, ";
     $sql .= "email = ?, ";
-    $sql .= "password = ?, ";
+    if($password_sent) {
+        $sql .= "password = ?, ";
+    }
     $sql .= "role = ?, ";
     $sql .= "department = ?, ";
     $sql .= "profile_image = ? ";
@@ -389,7 +407,12 @@ function update_staff($staff) {
     $query = $db_1->prepare($sql);
     confirm_query($query);
     
-    $query->bind_param("ssssssi", $staff['full_name'], $staff['email'], $hashed_password, $staff['role'], $staff['department'], $staff['profile_image'], $staff['id']);
+    if($password_sent) {
+        $hashed_password = password_hash($staff['hashed_password'], PASSWORD_BCRYPT);
+        $query->bind_param("ssssssi", $staff['full_name'], $staff['email'], $hashed_password, $staff['role'], $staff['department'], $staff['profile_image'], $staff['id']);
+    } else {
+        $query->bind_param("sssssi", $staff['full_name'], $staff['email'], $staff['role'], $staff['department'], $staff['profile_image'], $staff['id']);
+    }
     $query->execute();
     
 if ($query->affected_rows > 0) {

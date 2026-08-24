@@ -22,11 +22,25 @@ if (is_post_request()) {
     } elseif ($password !== $confirm_password) {
         $errors[] = "Passwords do not match.";
     } else {
+        // Handle image upload if provided
+        $image_name = null;
+        if (!empty($_FILES['profile_image']['name'])) {
+            $original_name = $_FILES['profile_image']['name'];
+            $tmp_path = $_FILES['profile_image']['tmp_name'];
+            $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+            if (in_array($ext, $allowed)) {
+                $image_name = 'student_' . time() . '.' . $ext;
+                $destination = __DIR__ . '/../modules/patients/images/patient_pictures/' . $image_name;
+                move_uploaded_file($tmp_path, $destination);
+            }
+        }
+
         // Check if matric exists
         if (find_student_by_matric($matric_number)) {
             $errors[] = "A student with this Matriculation Number is already registered.";
         } else {
-            $new_id = register_student($first_name, $surname, $email, $phone, $matric_number, $password);
+            $new_id = register_student($first_name, $surname, $email, $phone, $matric_number, $password, $image_name);
             if ($new_id) {
                 // Auto log in
                 $student = find_student_by_matric($matric_number);
@@ -54,13 +68,37 @@ $page_title = 'Student Registration';
     <style>
         .login-form input[type="text"], .login-form input[type="password"], .login-form input[type="email"] {
             margin: 5px 0;
-            width: 80%; /* Slightly wider for form inputs */
+            width: 90%; 
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
         }
         .login-form span {
-            width: 80%; /* Match width */
-            display: inline-block;
+            width: 90%; 
+            display: flex;
+            align-items: center;
+            margin: 0 auto 10px auto;
             text-align: left;
-            padding: 5px 2px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .login-form span i {
+            padding: 10px 15px;
+            background: #f4f7f6;
+            color: #555;
+            border-right: 1px solid #ddd;
+        }
+        .login-form span input {
+            border: none;
+            margin: 0;
+            width: 100%;
+            border-radius: 0;
+        }
+        .login-form span input:focus {
+            outline: none;
+            box-shadow: none;
         }
         .register-link {
             font-size: 0.9rem;
@@ -84,12 +122,12 @@ $page_title = 'Student Registration';
         <img src="<?php echo url_wrap('/assets/images/futa_logo.png'); ?>" width='120' height='120' />
       </div>
       
-      <div class="login-form" style="height: auto; width: 450px; padding-bottom: 20px;">
-        <p style="margin-top:20px;">Student Registration</p>
+      <div class="login-form" style="height: auto; width: 450px; padding-bottom: 20px; border-top: 5px solid #0F4E74;">
+        <p style="margin-top:20px; font-weight: 600; color: #0F4E74; font-size: 1.2rem;">Student Registration</p>
         <br />
-        <p>Create your Self-Service Portal account below.</p>
+        <p style="color: #666; margin-bottom: 20px;">Create your Self-Service Portal account below.</p>
         
-        <form action="register.php" method="post" style="margin-top:15px;">
+        <form action="register.php" method="post" enctype="multipart/form-data" style="margin-top:15px;">
             
             <div><span><i class="bi bi-person"></i>
               <input type="text" name="first_name" value="<?php echo v_wrap($first_name); ?>" placeholder="First Name" required/></span></div>
@@ -98,7 +136,7 @@ $page_title = 'Student Registration';
               <input type="text" name="surname" value="<?php echo v_wrap($surname); ?>" placeholder="Surname" required/></span></div>
             
             <div><span><i class="bi bi-card-text"></i>
-              <input type="text" name="matric_number" value="<?php echo v_wrap($matric_number); ?>" placeholder="Matriculation Number (e.g. CSC/18/1234)" required/></span></div>
+              <input type="text" name="matric_number" value="<?php echo v_wrap($matric_number); ?>" placeholder="Matric No (e.g. CSC/18/1234)" required/></span></div>
 
             <div><span><i class="bi bi-envelope"></i>
               <input type="email" name="email" value="<?php echo v_wrap($email); ?>" placeholder="Email Address"/></span></div>
@@ -112,12 +150,17 @@ $page_title = 'Student Registration';
              <div><span><i class="bi bi-lock-fill"></i>
                <input type="password" name="confirm_password" value="" placeholder="Confirm Password" required/></span></div>
             
+            <div><span style="background: white;"><i class="bi bi-camera"></i>
+              <input type="file" name="profile_image" accept="image/*" style="padding: 8px;" /></span>
+              <small style="color: #666; display: block; margin: -5px auto 10px auto; width: 90%; text-align: left;">Upload a profile picture (optional)</small>
+            </div>
+
             <div class="errors">
                 <?php echo display_errors($errors); ?>
             </div>
             
-            <div id="submit-response">
-                <input type="submit" name="submit" value="Register Account" style="width: 85%;" />
+            <div id="submit-response" style="margin-top: 20px;">
+                <input type="submit" name="submit" value="Register Account" style="width: 90%; background: #0F4E74; border-radius: 5px;" />
             </div>
         </form>
 

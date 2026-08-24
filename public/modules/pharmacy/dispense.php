@@ -2,6 +2,11 @@
 require_once('../../../private/config.php');
 require_password_reset();
 
+if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], ['pharmacist', 'admin', 'super_admin'])) {
+    $_SESSION['error'] = "Access Denied: You do not have permission to dispense medication.";
+    redirect_to(url_wrap('/staff/dashboard.php'));
+}
+
 $id = $_GET['id'] ?? null;
 if (!$id || !is_numeric($id)) {
     $_SESSION['error'] = "Invalid prescription record.";

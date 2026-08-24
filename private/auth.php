@@ -8,6 +8,7 @@
     $_SESSION['last_login'] = time();
     $_SESSION['email'] = $staff['email'];
     $_SESSION['role_id'] = $staff['role_id'];
+    $_SESSION['staff_role'] = $staff['role'];
       
     $actorId = $_SESSION['staff_id'] ?? $staff['id']; // fallback if no login yet
     logAction($actorId, 'LOGIN', 'staff', $staff['id']);
@@ -25,6 +26,7 @@
     unset($_SESSION['last_login']);
     unset($_SESSION['email']);
     unset($_SESSION['role_id']);
+    unset($_SESSION['staff_role']);
     // session_destroy(); // optional: destroys the whole session;
     return true;
   }
@@ -88,6 +90,10 @@ function require_password_reset() {
 //  or perform the activity it protects
 function hasPermission($permissionName) {
     global $db_1;
+
+    if (isset($_SESSION['staff_role']) && $_SESSION['staff_role'] === 'super_admin') {
+        return true;
+    }
 
     $role_id = $_SESSION['role_id'];
 

@@ -41,7 +41,6 @@ footer {
     background: #0F4E74; /* Matching the header blue */
     min-width: 220px;
     max-width: 280px;
-    height: 100vh;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -76,6 +75,15 @@ footer {
 .nav-item.active {
     background: #e53935; /* Reference bright red */
     color: white;
+    font-weight: 600;
+}
+
+.nav-section-label {
+    padding: 10px 20px 4px;
+    font-size: 0.7rem;
+    color: #8ba8b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     font-weight: 600;
 }
 

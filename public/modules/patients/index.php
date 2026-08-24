@@ -59,10 +59,420 @@ include(SHARED_PATH . '/header.php'); ?>
 <?php if (hasPermission('view_patient')) { ?>
     
 <div class="above-tabs">
-  <a id="link_layout" class="add-staff" href="<?php echo url_wrap('/modules/patients/new.php'); ?>" style="margin-right: 20px"> Register Patients </a>
-  <a id="link_layout" class="add-staff" href="<?php echo url_wrap('/patient/new.php'); ?>"> Import Patients </a>
+  <button data-modal-target="registerPatientModal" class="add-staff" style="margin-right: 20px; background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:600;"> Register Patients </button>
+  <a id="link_layout" class="add-staff" href="<?php echo url_wrap('/modules/patients/import.php'); ?>"> Import Patients </a>
 </div>
+
+<!-- Patient Registration Multi-Step Modal -->
+<div id="registerPatientModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+        <button class="modal-close" data-modal-close>&times;</button>
+        <h3 class="modal-title"><i class="bi bi-person-plus"></i> Patient Registration</h3>
+        
+        <form action="<?php echo url_wrap('/modules/patients/new_patient_processor.php'); ?>" method="post" enctype="multipart/form-data" id="patientRegistrationForm">
+            
+            <!-- Step 1: Basic Information -->
+            <div class="modal-step" data-step="1">
+                <h4 style="margin-top:0; color:#444;">Step 1: Basic Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Patient Category *</label>
+                    <select name="patient_category" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        <option value="Student">Student</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Dependant">Dependant</option>
+                        <option value="External">External</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>Surname *</label>
+                        <input type="text" name="surname" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label>First Name *</label>
+                        <input type="text" name="first_name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>Sex *</label>
+                        <select name="sex" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>Date of Birth *</label>
+                        <input type="date" name="date_of_birth" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Profile Image (Optional)</label>
+                    <input type="file" name="profile_image" accept="image/*" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="text-align:right;">
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Contact Information -->
+            <div class="modal-step" data-step="2" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 2: Contact Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Phone Number *</label>
+                    <input type="text" name="phone" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Email Address</label>
+                    <input type="email" name="email" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Residential Address *</label>
+                    <textarea name="address" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; height:60px;"></textarea>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Emergency Information -->
+            <div class="modal-step" data-step="3" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 3: Emergency Contact</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Emergency Contact Name *</label>
+                    <input type="text" name="emergency_contact_name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Emergency Contact Phone *</label>
+                    <input type="text" name="emergency_contact_phone" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Relationship *</label>
+                    <input type="text" name="emergency_contact_relationship" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 4: Medical Information -->
+            <div class="modal-step" data-step="4" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 4: Medical Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>Blood Group</label>
+                        <select name="blood_group" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="">Unknown</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>Genotype</label>
+                        <select name="genotype" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="">Unknown</option>
+                            <option value="AA">AA</option>
+                            <option value="AS">AS</option>
+                            <option value="SS">SS</option>
+                            <option value="AC">AC</option>
+                            <option value="SC">SC</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Allergies</label>
+                    <textarea name="allergies" placeholder="None" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; height:50px;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Chronic Conditions</label>
+                    <textarea name="chronic_conditions" placeholder="None" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; height:50px;"></textarea>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 5: University Information -->
+            <div class="modal-step" data-step="5" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 5: FUTA Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Matric / Staff Number</label>
+                    <input type="text" name="matric_number" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Faculty / School</label>
+                    <input type="text" name="faculty" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Department</label>
+                    <input type="text" name="department" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="submit" class="btn" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Complete Registration</button>
+                </div>
+            </div>
+            
+        </form>
+    </div>
+</div>
+
+<div id="editPatientModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+        <button class="modal-close" data-modal-close>&times;</button>
+        <h3 class="modal-title"><i class="bi bi-person-plus"></i> Patient Registration</h3>
+        
+        <form id="editPatientForm" action="<?php echo url_wrap('/modules/patients/edit_patient_processor.php'); ?>" method="post" enctype="multipart/form-data" id="patientRegistrationForm">
+            
+            <!-- Step 1: Basic Information -->
+            <div class="modal-step" data-step="1">
+                <h4 style="margin-top:0; color:#444;">Step 1: Basic Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Patient Category *</label>
+                    <select name="patient_category" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        <option value="Student">Student</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Dependant">Dependant</option>
+                        <option value="External">External</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>Surname *</label>
+                        <input type="text" name="surname" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label>First Name *</label>
+                        <input type="text" name="first_name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>Sex *</label>
+                        <select name="sex" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>Date of Birth *</label>
+                        <input type="date" name="date_of_birth" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Profile Image (Optional)</label>
+                    <input type="file" name="profile_image" accept="image/*" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="text-align:right;">
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Contact Information -->
+            <div class="modal-step" data-step="2" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 2: Contact Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Phone Number *</label>
+                    <input type="text" name="phone" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Email Address</label>
+                    <input type="email" name="email" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Residential Address *</label>
+                    <textarea name="address" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; height:60px;"></textarea>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Emergency Information -->
+            <div class="modal-step" data-step="3" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 3: Emergency Contact</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Emergency Contact Name *</label>
+                    <input type="text" name="emergency_contact_name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Emergency Contact Phone *</label>
+                    <input type="text" name="emergency_contact_phone" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Relationship *</label>
+                    <input type="text" name="emergency_contact_relationship" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 4: Medical Information -->
+            <div class="modal-step" data-step="4" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 4: Medical Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div style="flex:1;">
+                        <label>Blood Group</label>
+                        <select name="blood_group" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="">Unknown</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>Genotype</label>
+                        <select name="genotype" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="">Unknown</option>
+                            <option value="AA">AA</option>
+                            <option value="AS">AS</option>
+                            <option value="SS">SS</option>
+                            <option value="AC">AC</option>
+                            <option value="SC">SC</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Allergies</label>
+                    <textarea name="allergies" placeholder="None" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; height:50px;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Chronic Conditions</label>
+                    <textarea name="chronic_conditions" placeholder="None" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; height:50px;"></textarea>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="button" class="btn next-step" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Next &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 5: University Information -->
+            <div class="modal-step" data-step="5" style="display:none;">
+                <h4 style="margin-top:0; color:#444;">Step 5: FUTA Information</h4>
+                <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Matric / Staff Number</label>
+                    <input type="text" name="matric_number" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Faculty / School</label>
+                    <input type="text" name="faculty" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Department</label>
+                    <input type="text" name="department" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                </div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <button type="button" class="btn prev-step" style="background:#ccc; color:#333; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">&larr; Prev</button>
+                    <button type="submit" class="btn" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">Complete Update</button>
+                </div>
+            </div>
+            
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const nextBtns = document.querySelectorAll('.next-step');
+    const prevBtns = document.querySelectorAll('.prev-step');
+    const steps = document.querySelectorAll('.modal-step');
     
+    nextBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const currentStep = this.closest('.modal-step');
+            const requiredFields = currentStep.querySelectorAll('[required]');
+            let valid = true;
+            requiredFields.forEach(field => {
+                if (!field.value) {
+                    field.style.borderColor = 'red';
+                    valid = false;
+                } else {
+                    field.style.borderColor = '#ddd';
+                }
+            });
+            if (!valid) {
+                alert("Please fill out all required fields.");
+                return;
+            }
+            
+            const nextStepNum = parseInt(currentStep.getAttribute('data-step')) + 1;
+            const nextStep = document.querySelector(`.modal-step[data-step="${nextStepNum}"]`);
+            if (nextStep) {
+                currentStep.style.display = 'none';
+                nextStep.style.display = 'block';
+            }
+        });
+    });
+    
+    prevBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const currentStep = this.closest('.modal-step');
+            const prevStepNum = parseInt(currentStep.getAttribute('data-step')) - 1;
+            const prevStep = document.querySelector(`.modal-step[data-step="${prevStepNum}"]`);
+            if (prevStep) {
+                currentStep.style.display = 'none';
+                prevStep.style.display = 'block';
+            }
+        });
+    });
+});
+</script>
+
 <?php } ?>
     
   <div class="tabs" role="tablist">
@@ -73,8 +483,6 @@ include(SHARED_PATH . '/header.php'); ?>
     Patient Statistics
   </button>
   </div>
-    
-    
     
      <div id="patient" class="tab-content active" role="tabpanel" aria-labelledby="patient-tab">
        

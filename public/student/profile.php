@@ -4,8 +4,20 @@ require_student_login();
 $student = find_student_by_matric($_SESSION['student_matric']);
 
 if (is_post_request()) {
-    // In a full implementation, you'd validate and update phone/email/password here
-    $_SESSION['message'] = "Profile update feature coming soon.";
+    $phone = $_POST['phone'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
+    
+    if ($password !== '' && $password !== $confirm) {
+        $_SESSION['error'] = "Passwords do not match.";
+    } else {
+        $update_pwd = ($password !== '') ? $password : null;
+        update_student_profile($student['id'], $phone, $email, $update_pwd);
+        $_SESSION['message'] = "Profile updated successfully.";
+        // refresh student details
+        $student = find_student_by_matric($_SESSION['student_matric']);
+    }
     redirect_to(url_wrap('/student/profile.php'));
 }
 
@@ -19,7 +31,7 @@ $page_title = 'Update Profile';
     <title><?php echo v_wrap($page_title); ?> - FUTA HCMS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../assets/css/student_portal.css">
+    <link rel="stylesheet" href="../assets/css/student_portal.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <header class="portal-header">
@@ -28,8 +40,15 @@ $page_title = 'Update Profile';
             FUTA HCMS Student Portal
         </div>
         <div class="user-menu">
-            <a href="dashboard.php" style="color:#555; text-decoration:none; margin-right:15px;">Dashboard</a>
-            <span><i class="bi bi-person-circle"></i> <?php echo v_wrap($student['first_name']); ?></span>
+            <a href="dashboard.php" style="margin-right:15px;">Dashboard</a>
+            <span>
+                <?php if (!empty($student['profile_image'])) { ?>
+                    <img src="<?php echo url_wrap('/modules/patients/images/patient_pictures/' . v_wrap($student['profile_image'])); ?>" alt="Profile" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 5px;">
+                <?php } else { ?>
+                    <i class="bi bi-person-circle" style="vertical-align: middle; margin-right: 5px;"></i>
+                <?php } ?>
+                <?php echo v_wrap($student['first_name']); ?>
+            </span>
         </div>
     </header>
 
@@ -71,5 +90,6 @@ $page_title = 'Update Profile';
 
         </div>
     </div>
+    <script src="../assets/js/modal.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

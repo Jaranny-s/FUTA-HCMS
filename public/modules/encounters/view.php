@@ -23,7 +23,8 @@ if (is_post_request()) {
 
     if ($action === 'save_vitals') {
         save_vitals($encounter_id, $staff_id, $_POST['temperature'], $_POST['weight'], $_POST['height'], $_POST['bmi'], $_POST['pulse'], $_POST['respiration'], $_POST['oxygen_saturation'], $_POST['systolic_bp'], $_POST['diastolic_bp']);
-        $_SESSION['message'] = "Vitals saved successfully.";
+        update_encounter_status($encounter_id, 'In Progress');
+        $_SESSION['message'] = "Vitals saved successfully. Patient is ready for doctor consultation.";
     } elseif ($action === 'save_nursing_note') {
         save_nursing_note($encounter_id, $staff_id, $_POST['notes']);
         $_SESSION['message'] = "Nursing note added.";
@@ -132,20 +133,29 @@ include(SHARED_PATH . '/header.php');
                         </div>
                     <?php } else { ?>
                         <?php if (hasPermission('add_vitals')) { ?>
-                            <form action="" method="post">
-                                <input type="hidden" name="action" value="save_vitals">
-                                <div class="form-grid">
-                                    <div class="form-group"><label>Temp (°C)</label><input type="number" step="0.1" name="temperature"></div>
-                                    <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" name="weight"></div>
-                                    <div class="form-group"><label>Height (cm)</label><input type="number" step="0.1" name="height"></div>
-                                    <div class="form-group"><label>Systolic BP</label><input type="number" name="systolic_bp"></div>
-                                    <div class="form-group"><label>Diastolic BP</label><input type="number" name="diastolic_bp"></div>
-                                    <div class="form-group"><label>Pulse (bpm)</label><input type="number" name="pulse"></div>
-                                    <div class="form-group"><label>SpO2 (%)</label><input type="number" name="oxygen_saturation"></div>
-                                    <div class="form-group"><label>Respiration</label><input type="number" name="respiration"></div>
+                            <button data-modal-target="addVitalsModal" class="btn btn-primary" style="margin-bottom:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Record New Vitals</button>
+                            
+                            <!-- Add Vitals Modal -->
+                            <div id="addVitalsModal" class="modal-overlay">
+                                <div class="modal-content">
+                                    <button class="modal-close" data-modal-close>&times;</button>
+                                    <h3 class="modal-title"><i class="bi bi-heart-pulse"></i> Record Patient Vitals</h3>
+                                    <form action="" method="post">
+                                        <input type="hidden" name="action" value="save_vitals">
+                                        <div class="form-grid">
+                                            <div class="form-group"><label>Temp (°C)</label><input type="number" step="0.1" name="temperature"></div>
+                                            <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" name="weight"></div>
+                                            <div class="form-group"><label>Height (cm)</label><input type="number" step="0.1" name="height"></div>
+                                            <div class="form-group"><label>Systolic BP</label><input type="number" name="systolic_bp"></div>
+                                            <div class="form-group"><label>Diastolic BP</label><input type="number" name="diastolic_bp"></div>
+                                            <div class="form-group"><label>Pulse (bpm)</label><input type="number" name="pulse"></div>
+                                            <div class="form-group"><label>SpO2 (%)</label><input type="number" name="oxygen_saturation"></div>
+                                            <div class="form-group"><label>Respiration</label><input type="number" name="respiration"></div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width:100%;">Save Vitals</button>
+                                    </form>
                                 </div>
-                                <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">Save Vitals</button>
-                            </form>
+                            </div>
                         <?php } else { echo "<p>No vitals recorded yet.</p>"; } ?>
                     <?php } ?>
                 </div>
@@ -162,11 +172,20 @@ include(SHARED_PATH . '/header.php');
                         <?php } ?>
                     </div>
                     <?php if (hasPermission('add_nursing_notes')) { ?>
-                        <form action="" method="post">
-                            <input type="hidden" name="action" value="save_nursing_note">
-                            <textarea name="notes" rows="3" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;" placeholder="Add new nursing note..."></textarea>
-                            <button type="submit" class="btn btn-primary" style="margin-top:10px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">Add Note</button>
-                        </form>
+                        <button data-modal-target="addNursingNoteModal" class="btn btn-primary" style="margin-top:10px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Add Note</button>
+                        
+                        <!-- Add Nursing Note Modal -->
+                        <div id="addNursingNoteModal" class="modal-overlay">
+                            <div class="modal-content">
+                                <button class="modal-close" data-modal-close>&times;</button>
+                                <h3 class="modal-title"><i class="bi bi-journal-text"></i> Add Nursing Note</h3>
+                                <form action="" method="post">
+                                    <input type="hidden" name="action" value="save_nursing_note">
+                                    <textarea name="notes" rows="4" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;" placeholder="Add new nursing note..."></textarea>
+                                    <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width:100%;">Save Note</button>
+                                </form>
+                            </div>
+                        </div>
                     <?php } ?>
                 </div>
             </div>
@@ -225,33 +244,39 @@ include(SHARED_PATH . '/header.php');
                 </table>
 
                 <?php if (hasPermission('add_diagnosis')) { ?>
-                <h4>Add New Diagnosis</h4>
-                <form action="" method="post" style="border-top:1px solid #eee; padding-top:15px;">
-                    <input type="hidden" name="action" value="save_diagnosis">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Type</label>
-                            <select name="diagnosis_type" required>
-                                <option value="Provisional">Provisional</option>
-                                <option value="Confirmed">Confirmed</option>
-                                <option value="Final">Final</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Diagnosis Description *</label>
-                            <input type="text" name="diagnosis" required>
-                        </div>
-                        <div class="form-group">
-                            <label>ICD-10 Code</label>
-                            <input type="text" name="icd_code">
-                        </div>
-                        <div class="form-group">
-                            <label>Notes</label>
-                            <input type="text" name="notes">
-                        </div>
+                <button data-modal-target="addDiagnosisModal" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Add Diagnosis</button>
+                
+                <!-- Add Diagnosis Modal -->
+                <div id="addDiagnosisModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <button class="modal-close" data-modal-close>&times;</button>
+                        <h3 class="modal-title"><i class="bi bi-clipboard2-pulse"></i> Add New Diagnosis</h3>
+                        <form action="" method="post">
+                            <input type="hidden" name="action" value="save_diagnosis">
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>Type</label>
+                                <select name="diagnosis_type" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                    <option value="Provisional">Provisional</option>
+                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="Final">Final</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>Diagnosis Description *</label>
+                                <input type="text" name="diagnosis" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>ICD-10 Code</label>
+                                <input type="text" name="icd_code" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>Notes</label>
+                                <textarea name="notes" rows="2" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="margin-top:10px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width:100%;">Save Diagnosis</button>
+                        </form>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">Add Diagnosis</button>
-                </form>
+                </div>
                 <?php } ?>
             </div>
         </div>
@@ -274,29 +299,46 @@ include(SHARED_PATH . '/header.php');
                 </table>
 
                 <?php if (hasPermission('add_prescription')) { ?>
-                <h4>Write New Prescription</h4>
-                <form action="" method="post" style="border-top:1px solid #eee; padding-top:15px;">
-                    <input type="hidden" name="action" value="save_prescription">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Medication *</label>
-                            <select name="inventory_id" required>
-                                <option value="">-- Select from Inventory --</option>
-                                <?php while($inv = $inventory_items->fetch_assoc()) { ?>
-                                    <option value="<?php echo $inv['id']; ?>"><?php echo v_wrap($inv['drug_name'] . ' (' . $inv['stock_quantity'] . ' in stock)'); ?></option>
-                                <?php } ?>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Dosage</label><input type="text" name="dosage" placeholder="e.g. 500mg"></div>
-                        <div class="form-group"><label>Frequency</label><input type="text" name="frequency" placeholder="e.g. BD (Twice daily)"></div>
-                        <div class="form-group"><label>Duration</label><input type="text" name="duration" placeholder="e.g. 5 days"></div>
+                <button data-modal-target="addPrescriptionModal" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Write Prescription</button>
+                
+                <!-- Add Prescription Modal -->
+                <div id="addPrescriptionModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <button class="modal-close" data-modal-close>&times;</button>
+                        <h3 class="modal-title"><i class="bi bi-prescription2"></i> Write New Prescription</h3>
+                        <form action="" method="post">
+                            <input type="hidden" name="action" value="save_prescription">
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>Medication *</label>
+                                <select name="inventory_id" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                    <option value="">-- Select from Inventory --</option>
+                                    <?php while($inv = $inventory_items->fetch_assoc()) { ?>
+                                        <option value="<?php echo $inv['id']; ?>"><?php echo v_wrap($inv['drug_name'] . ' (' . $inv['stock_quantity'] . ' in stock)'); ?></option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                                <div class="form-group">
+                                    <label>Dosage</label>
+                                    <input type="text" name="dosage" placeholder="e.g. 500mg" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Frequency</label>
+                                    <input type="text" name="frequency" placeholder="e.g. BD" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>Duration</label>
+                                <input type="text" name="duration" placeholder="e.g. 5 days" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:15px;">
+                                <label>Special Instructions</label>
+                                <input type="text" name="instructions" placeholder="e.g. Take after food" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="margin-top:10px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width:100%;">Add Prescription</button>
+                        </form>
                     </div>
-                    <div class="form-group" style="margin-top:10px;">
-                        <label>Special Instructions</label>
-                        <input type="text" name="instructions" placeholder="e.g. Take after food" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">Add Prescription</button>
-                </form>
+                </div>
                 <?php } ?>
             </div>
         </div>

@@ -208,4 +208,17 @@ function save_prescription($encounter_id, $doctor_id, $inventory_id, $dosage, $f
     return $db_1->insert_id;
 }
 
+function get_patient_medical_history($patient_id) {
+    global $db_1;
+    $sql = "SELECT e.*, d.full_name as doctor_name 
+            FROM encounters e 
+            LEFT JOIN staff d ON e.doctor_id = d.id 
+            WHERE e.patient_id = ? AND e.status = 'Completed' 
+            ORDER BY e.created_at DESC";
+    $query = $db_1->prepare($sql);
+    $query->bind_param("i", $patient_id);
+    $query->execute();
+    return $query->get_result();
+}
+
 ?>
