@@ -83,6 +83,11 @@ include(SHARED_PATH . '/header.php'); ?>
             </div>
             
             <div class="form-group" style="margin-bottom: 15px;">
+                <label>Password</label>
+                <small>Automatically Generated</small>
+              </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
                 <label>Role *</label>
                 <select name="role" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
                     <option value="" disabled selected>Select staff role</option>

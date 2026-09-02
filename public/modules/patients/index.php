@@ -248,10 +248,10 @@ include(SHARED_PATH . '/header.php'); ?>
 <div id="editPatientModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
         <button class="modal-close" data-modal-close>&times;</button>
-        <h3 class="modal-title"><i class="bi bi-person-plus"></i> Patient Registration</h3>
+        <h3 class="modal-title"><i class="bi bi-person-plus"></i> Patient Edit</h3>
         
-        <form id="editPatientForm" action="<?php echo url_wrap('/modules/patients/edit_patient_processor.php'); ?>" method="post" enctype="multipart/form-data" id="patientRegistrationForm">
-            
+        <form id="editPatientForm" action="<?php echo url_wrap('/modules/patients/edit_patient_processor.php'); ?>" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="id" id="edit_patient_id">
             <!-- Step 1: Basic Information -->
             <div class="modal-step" data-step="1">
                 <h4 style="margin-top:0; color:#444;">Step 1: Basic Information</h4>
@@ -578,7 +578,7 @@ document.addEventListener("DOMContentLoaded", function() {
           <td><?php echo v_wrap($patient['patient_category']); ?></td>
           <td><?php echo v_wrap($patient['status']); ?></td>
           <td><?php if (hasPermission('view_patient')) { ?><a class="view-patient" href="<?php echo url_wrap('/modules/patients/view.php?id=' . v_wrap(u_wrap($patient['id']))); ?>"><i class="bi bi-eye"></i></a><?php } ?></td>
-          <td><?php if (hasPermission('edit_patient')) { ?><a class="edit-patient" href="<?php echo url_wrap('/modules/patients/edit.php?id=' . v_wrap(u_wrap($patient['id']))); ?>"><i class="bi bi-pencil-square"></i></a><?php } ?></td>
+          <td><?php if (hasPermission('edit_patient')) { ?><a href="#" class="edit-patient" data-modal-target="editPatientModal" data-patient-id="<?php echo v_wrap($patient['id']); ?>"><i class="bi bi-pencil-square"></i></a><?php } ?></td>
           <td><?php if (hasPermission('view_medical_history')) { ?><a class="edit-patient" href="<?php echo url_wrap('/modules/patients/history.php?id=' . v_wrap(u_wrap($patient['id']))); ?>"><i class="bi bi-clock-history"></i></a><?php } ?></td>
         </tr>
       <?php } // close foreach statement ?>

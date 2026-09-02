@@ -97,15 +97,17 @@ function book_student_appointment($patient_id, $date, $time, $type, $reason) {
     // Let's fetch the first doctor
     $q_doc = $db_1->query("SELECT id FROM staff WHERE role_id = (SELECT id FROM roles WHERE role_name='Doctor' LIMIT 1) LIMIT 1");
     $doc_row = $q_doc->fetch_assoc();
-    $doctor_id = $doc_row ? $doc_row['id'] : 1;
+   // $doctor_id = $doc_row ? $doc_row['id'] : 1;
     
-    $booked_by = 1; // Assuming 1 is system or generic admin for self-booking
+   // $booked_by = 1; // Assuming 1 is system or generic admin for self-booking
     
-    $sql = "INSERT INTO appointments (appointment_number, patient_id, doctor_id, booked_by, appointment_date, appointment_type, reason, status) ";
-    $sql .= "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')";
+// $sql = "INSERT INTO appointments (appointment_number, patient_id, doctor_id, booked_by, appointment_date, appointment_type, reason, status) ";
+    $sql = "INSERT INTO appointments (appointment_number, patient_id, appointment_date, appointment_type, reason, status) ";
+    $sql .= "VALUES (?, ?, ?, ?, ?, 'Pending')";
     
     $query = $db_1->prepare($sql);
-    $query->bind_param("siiisss", $app_num, $patient_id, $doctor_id, $booked_by, $datetime, $type, $reason);
+   // $query->bind_param("siiisss", $app_num, $patient_id, $doctor_id, $booked_by, $datetime, $type, $reason);
+    $query->bind_param("sisss", $app_num, $patient_id, $datetime, $type, $reason);
     $query->execute();
     return $db_1->insert_id;
 }
