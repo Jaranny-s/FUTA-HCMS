@@ -73,7 +73,7 @@ if (is_post_request() && isset($_FILES['csv_file'])) {
         ];
         
         $result = insert_patient($patient);
-        if ($result['success'] === true) {
+        if (isset($result['success']) && $result['success'] === true) {
             $successCount++;
         } else {
             $errorCount++;

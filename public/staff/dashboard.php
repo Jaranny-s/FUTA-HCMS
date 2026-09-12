@@ -158,12 +158,53 @@ include(SHARED_PATH . '/header.php'); ?>
     </div>
 
     <?php elseif($role === 'doctor'): ?>
+    <?php
+    $my_enc_count = 0;
+    if (isset($_SESSION['staff_id'])) {
+        $chk_stmt = $db_1->prepare("SELECT COUNT(*) FROM encounters WHERE doctor_id = ?");
+        $chk_stmt->bind_param("i", $_SESSION['staff_id']);
+        $chk_stmt->execute();
+        $chk_stmt->bind_result($my_enc_count);
+        $chk_stmt->fetch();
+        $chk_stmt->close();
+    }
+    ?>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
-      <a href="<?php echo url_wrap('/modules/encounters/index.php'); ?>" style="text-decoration:none; background: #0F4E74; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(15,78,116,0.3); transition: 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
+      <?php if ($my_enc_count > 0): ?>
+      <a href="<?php echo url_wrap('/modules/encounters/index.php?mine=1'); ?>" style="text-decoration:none; background: #0F4E74; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(15,78,116,0.3); transition: 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
         <i class="bi bi-heart-pulse" style="font-size: 2rem; color: white;"></i>
-        <p style="margin: 8px 0 0; font-weight: 600; color: white;">My Encounters</p>
+        <p style="margin: 8px 0 0; font-weight: 600; color: white;">My Encounters (<?php echo $my_enc_count; ?>)</p>
         <p style="margin: 4px 0 0; font-size: 0.8rem; color: rgba(255,255,255,0.8);">Active consultations</p>
       </a>
+      <?php else: ?>
+      <a href="#" data-modal-target="noDoctorEncountersModal" style="text-decoration:none; background: #0F4E74; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(15,78,116,0.3); transition: 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
+        <i class="bi bi-heart-pulse" style="font-size: 2rem; color: white;"></i>
+        <p style="margin: 8px 0 0; font-weight: 600; color: white;">My Encounters</p>
+        <p style="margin: 4px 0 0; font-size: 0.8rem; color: rgba(255,255,255,0.8);">No active consultations</p>
+      </a>
+
+      <!-- Modal when no encounters assigned -->
+      <div id="noDoctorEncountersModal" class="modal-overlay">
+          <div class="modal-content" style="max-width: 440px; text-align: center; padding: 30px 25px;">
+              <button class="modal-close" data-modal-close>&times;</button>
+              <div style="width: 60px; height: 60px; background: #eaf2f8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                  <i class="bi bi-journal-medical" style="font-size: 1.8rem; color: #0F4E74;"></i>
+              </div>
+              <h3 style="margin: 0 0 10px 0; color: #0F4E74;">No Encounters Available</h3>
+              <p style="color: #666; font-size: 0.92rem; line-height: 1.5; margin-bottom: 25px;">
+                  You currently have no patient encounters assigned to you in the clinic queue. When a receptionist checks in a patient and assigns them to your care, they will appear here.
+              </p>
+              <div style="display:flex; gap:10px; justify-content:center;">
+                  <button data-modal-close class="btn" style="background: #0F4E74; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; flex: 1;">
+                      Understood
+                  </button>
+                  <a href="<?php echo url_wrap('/modules/encounters/index.php'); ?>" class="btn" style="background: #eaf2f8; color: #0F4E74; border: 1px solid #b3d1e6; padding: 10px 20px; border-radius: 6px; font-weight: 600; text-decoration: none; display: inline-block; text-align:center;">
+                      View All Encounters
+                  </a>
+              </div>
+          </div>
+      </div>
+      <?php endif; ?>
       <a href="<?php echo url_wrap('/modules/patients/index.php'); ?>" style="text-decoration:none; background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #eee; transition: 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
         <i class="bi bi-people" style="font-size: 2rem; color: #0F4E74;"></i>
         <p style="margin: 8px 0 0; font-weight: 600; color: #333;">Patient Records</p>
@@ -230,6 +271,9 @@ include(SHARED_PATH . '/header.php'); ?>
       </a>
       <a href="<?php echo url_wrap('/staff/admin/activity_logs.php'); ?>" style="text-decoration:none; background: white; border-radius: 10px; padding: 15px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #eee; display: flex; align-items: center; gap: 10px; color: #333; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
         <i class="bi bi-journal-check" style="font-size: 1.4rem; color: #0F4E74;"></i> <span style="font-weight:600;">Activity Logs</span>
+      </a>
+      <a href="<?php echo url_wrap('/staff/admin/settings.php'); ?>" style="text-decoration:none; background: white; border-radius: 10px; padding: 15px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #eee; display: flex; align-items: center; gap: 10px; color: #333; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+        <i class="bi bi-gear" style="font-size: 1.4rem; color: #0F4E74;"></i> <span style="font-weight:600;">System Settings</span>
       </a>
     </div>
     <?php endif; ?>

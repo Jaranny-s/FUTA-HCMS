@@ -8,15 +8,14 @@ if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], ['phar
 }
 
 $id = $_GET['id'] ?? null;
-if (!$id || !is_numeric($id)) {
-    $_SESSION['error'] = "Invalid prescription record.";
-    redirect_to(url_wrap('/modules/pharmacy/index.php'));
-}
+$rx = null;
 
-$rx = get_prescription_details((int)$id);
-if (!$rx || $rx['status'] != 'Pending') {
-    $_SESSION['error'] = "Prescription not found or already dispensed.";
-    redirect_to(url_wrap('/modules/pharmacy/index.php'));
+if ($id && is_numeric($id)) {
+    $rx = get_prescription_details((int)$id);
+    if (!$rx || $rx['status'] != 'Pending') {
+        $_SESSION['error'] = "Prescription not found or already dispensed.";
+        redirect_to(url_wrap('/modules/pharmacy/index.php'));
+    }
 }
 
 if (is_post_request()) {
@@ -56,6 +55,7 @@ include(SHARED_PATH . '/header.php');
 
         <div class="clinical-grid">
             
+            <?php if ($rx) { ?>
             <div class="card">
                 <h3>Prescription Details</h3>
                 <div style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #eee;">
@@ -114,6 +114,13 @@ include(SHARED_PATH . '/header.php');
                     </div>
                 <?php } ?>
             </div>
+            <?php } else { ?>
+                <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                    <i class="bi bi-info-circle" style="font-size: 3rem; color: #0F4E74; opacity: 0.5;"></i>
+                    <h3 style="margin-top: 15px; color: #555;">No Prescription Selected</h3>
+                    <p style="color: #777;">Please select a prescription from the <a href="<?php echo url_wrap('/modules/pharmacy/index.php'); ?>" style="color: #0F4E74; font-weight: bold;">Prescription Queue</a> to dispense medication.</p>
+                </div>
+            <?php } ?>
 
         </div>
     </main>

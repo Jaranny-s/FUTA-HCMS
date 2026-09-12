@@ -47,24 +47,40 @@ function create_encounter($patient_id, $doctor_id, $appointment_id, $priority, $
     return $new_id;
 }
 
-function find_all_encounters($status = null) {
+function find_all_encounters($status = null, $doctor_id = null) {
     global $db_1;
     
-    $sql = "SELECT e.*, p.first_name as patient_first, p.surname as patient_last, p.patient_id as p_id, d.full_name as doctor_name ";
+    $sql = "SELECT e.*, p.first_name as patient_first, p.surname as patient_last, p.patient_id as p_id, COALESCE(d.full_name, 'Unassigned') as doctor_name ";
     $sql .= "FROM encounters e ";
     $sql .= "JOIN patients p ON e.patient_id = p.id ";
-    $sql .= "JOIN staff d ON e.doctor_id = d.id ";
+    $sql .= "LEFT JOIN staff d ON e.doctor_id = d.id ";
     
+    $conditions = [];
+    $types = "";
+    $params = [];
+
     if ($status) {
-        $sql .= "WHERE e.status = ? ";
+        $conditions[] = "e.status = ?";
+        $types .= "s";
+        $params[] = $status;
+    }
+
+    if ($doctor_id) {
+        $conditions[] = "e.doctor_id = ?";
+        $types .= "i";
+        $params[] = $doctor_id;
+    }
+
+    if (!empty($conditions)) {
+        $sql .= "WHERE " . implode(" AND ", $conditions) . " ";
     }
     
     $sql .= "ORDER BY e.created_at DESC";
     
     $query = $db_1->prepare($sql);
     
-    if ($status) {
-        $query->bind_param("s", $status);
+    if (!empty($params)) {
+        $query->bind_param($types, ...$params);
     }
     
     $query->execute();
@@ -74,10 +90,10 @@ function find_all_encounters($status = null) {
 function find_encounter_by_id($id) {
     global $db_1;
     
-    $sql = "SELECT e.*, p.first_name as patient_first, p.surname as patient_last, p.patient_category, p.gender, p.date_of_birth, p.blood_group, p.profile_image, p.patient_id as p_id, d.full_name as doctor_name ";
+    $sql = "SELECT e.*, p.first_name as patient_first, p.surname as patient_last, p.patient_category, p.gender, p.date_of_birth, p.blood_group, p.profile_image, p.patient_id as p_id, COALESCE(d.full_name, 'Unassigned') as doctor_name ";
     $sql .= "FROM encounters e ";
     $sql .= "JOIN patients p ON e.patient_id = p.id ";
-    $sql .= "JOIN staff d ON e.doctor_id = d.id ";
+    $sql .= "LEFT JOIN staff d ON e.doctor_id = d.id ";
     $sql .= "WHERE e.id = ?";
     
     $query = $db_1->prepare($sql);
@@ -103,7 +119,27 @@ function update_encounter_status($id, $status) {
     $query = $db_1->prepare($sql);
     $query->bind_param("si", $status, $id);
     $query->execute();
-    return $query->affected_rows > 0;
+    $affected = $query->affected_rows > 0;
+    $query->close();
+
+    // If completed and linked to an appointment, synchronize appointment status
+    if ($status === 'Completed') {
+        $app_q = $db_1->prepare("SELECT appointment_id FROM encounters WHERE id = ?");
+        $app_q->bind_param("i", $id);
+        $app_q->execute();
+        $res = $app_q->get_result();
+        if ($row = $res->fetch_assoc()) {
+            if (!empty($row['appointment_id'])) {
+                $up_app = $db_1->prepare("UPDATE appointments SET status = 'Completed' WHERE id = ?");
+                $up_app->bind_param("i", $row['appointment_id']);
+                $up_app->execute();
+                $up_app->close();
+            }
+        }
+        $app_q->close();
+    }
+
+    return $affected;
 }
 
 // --- Vitals ---
@@ -201,11 +237,26 @@ function get_prescriptions($encounter_id) {
 
 function save_prescription($encounter_id, $doctor_id, $inventory_id, $dosage, $freq, $duration, $instructions) {
     global $db_1;
-    $sql = "INSERT INTO prescriptions (encounter_id, doctor_id, inventory_id, dosage, frequency, duration, instructions) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    
+    $medication_name = 'Prescribed Medication';
+    if ($inventory_id) {
+        $inv_q = $db_1->prepare("SELECT drug_name FROM pharmacy_inventory WHERE id = ?");
+        $inv_q->bind_param("i", $inventory_id);
+        $inv_q->execute();
+        $res = $inv_q->get_result();
+        if ($row = $res->fetch_assoc()) {
+            $medication_name = $row['drug_name'];
+        }
+        $inv_q->close();
+    }
+
+    $sql = "INSERT INTO prescriptions (encounter_id, doctor_id, inventory_id, medication_name, dosage, frequency, duration, instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     $query = $db_1->prepare($sql);
-    $query->bind_param("iiissss", $encounter_id, $doctor_id, $inventory_id, $dosage, $freq, $duration, $instructions);
+    $query->bind_param("iiisssss", $encounter_id, $doctor_id, $inventory_id, $medication_name, $dosage, $freq, $duration, $instructions);
     $query->execute();
-    return $db_1->insert_id;
+    $new_id = $db_1->insert_id;
+    $query->close();
+    return $new_id;
 }
 
 function get_patient_medical_history($patient_id) {

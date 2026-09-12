@@ -25,7 +25,7 @@ $page_title = 'My Appointments';
             <a href="dashboard.php" style="margin-right:15px;">Dashboard</a>
             <span>
                 <?php if (!empty($student['profile_image'])) { ?>
-                    <img src="<?php echo url_wrap('/modules/patients/images/patient_pictures/' . v_wrap($student['profile_image'])); ?>" alt="Profile" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 5px;">
+                    <img src="<?php echo url_wrap('/modules/patients/images/patient_pictures/' . v_wrap($student['profile_image'])); ?>" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/default_profile_pic.png'); ?>';" alt="Profile" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 5px;">
                 <?php } else { ?>
                     <i class="bi bi-person-circle" style="vertical-align: middle; margin-right: 5px;"></i>
                 <?php } ?>

@@ -28,14 +28,17 @@ if(is_post_request()) {
     if($staff) {
       // using ome variable ensres that msg is the same
       if(password_verify($password, $staff['password'])) {
-        // password matches
-  log_in_staff($staff);
-  if ($staff['password_reset_required'] == 1) {
-         redirect_to(url_wrap('/staff/reset_password.php'));
-    } else {
-        redirect_to(url_wrap('/staff/dashboard.php'));
-  }
-        
+        if (!empty($staff['status']) && strtolower($staff['status']) === 'inactive') {
+          $errors[] = "Your account has been deactivated. Please contact an administrator.";
+        } else {
+          // password matches
+          log_in_staff($staff);
+          if ($staff['password_reset_required'] == 1) {
+            redirect_to(url_wrap('/staff/reset_password.php'));
+          } else {
+            redirect_to(url_wrap('/staff/dashboard.php'));
+          }
+        }
       } else {
         // username found but password does not match
         $errors[] = $login_failure_alert; 
@@ -87,8 +90,8 @@ if(is_post_request()) {
           <a href="#" style="color:#0F4E74; text-decoration:none;" onclick="alert('Password reset link would be sent to your email.')">Forgotten Password?</a>
       </div>
         
-      <div class="errors">
-        <?php echo display_errors($errors); ?></div>
+      <?php echo display_session_message(); ?>
+      <?php echo display_errors($errors); ?>
         
         <div id="submit-response">
         <input type="submit" name="submit" value="Log In" />

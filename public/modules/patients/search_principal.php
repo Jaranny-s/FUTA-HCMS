@@ -42,53 +42,14 @@ $search =
 |
 */
 
-$currentPatientId =
-    filter_input(
-        INPUT_GET,
-        'current_id',
-        FILTER_VALIDATE_INT
-    );
+$currentPatientId = isset($_GET['current_id']) ? (int)$_GET['current_id'] : 0;
 
-
-/*
-|--------------------------------------------------------------------------
-| Validate Search
-|--------------------------------------------------------------------------
-*/
-
-if (
-    $search === '' ||
-    mb_strlen($search) < 2
-) {
-
+if ($search === '' || mb_strlen($search) < 2) {
     echo json_encode([
         'success' => true,
         'patients' => []
     ]);
-
     exit;
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Validate Current Patient
-|--------------------------------------------------------------------------
-*/
-
-if (
-    !$currentPatientId ||
-    $currentPatientId <= 0
-) {
-
-    echo json_encode([
-        'success' => false,
-        'message' => 'Invalid current patient.'
-    ]);
-
-    exit;
-
 }
 
 

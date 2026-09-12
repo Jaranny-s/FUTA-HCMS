@@ -91,40 +91,134 @@ function book_student_appointment($patient_id, $date, $time, $type, $reason) {
     $app_num = "APT-$year-" . str_pad($next_num, 4, '0', STR_PAD_LEFT);
     $q_pid->close();
     
-    // default doctor = 0 or null if not selected, since student can't choose doc?
-    // Wait, the schema requires doctor_id. Let's find any doctor or set it to 1.
-    // Actually, appointments schema: doctor_id NO MUL. So it's required. Let's assign doctor_id = 2 (Assuming ID 2 is a doctor, or we can fetch one).
-    // Let's fetch the first doctor
-    $q_doc = $db_1->query("SELECT id FROM staff WHERE role_id = (SELECT id FROM roles WHERE role_name='Doctor' LIMIT 1) LIMIT 1");
-    $doc_row = $q_doc->fetch_assoc();
-   // $doctor_id = $doc_row ? $doc_row['id'] : 1;
+    $booked_by = NULL; // Self-booked by student
     
-   // $booked_by = 1; // Assuming 1 is system or generic admin for self-booking
-    
-// $sql = "INSERT INTO appointments (appointment_number, patient_id, doctor_id, booked_by, appointment_date, appointment_type, reason, status) ";
-    $sql = "INSERT INTO appointments (appointment_number, patient_id, appointment_date, appointment_type, reason, status) ";
-    $sql .= "VALUES (?, ?, ?, ?, ?, 'Pending')";
+    $sql = "INSERT INTO appointments (appointment_number, patient_id, appointment_date, appointment_type, reason, status, booked_by, doctor_id) ";
+    $sql .= "VALUES (?, ?, ?, ?, ?, 'Pending', ?, NULL)";
     
     $query = $db_1->prepare($sql);
-   // $query->bind_param("siiisss", $app_num, $patient_id, $doctor_id, $booked_by, $datetime, $type, $reason);
-    $query->bind_param("sisss", $app_num, $patient_id, $datetime, $type, $reason);
+    $query->bind_param("sisssi", $app_num, $patient_id, $datetime, $type, $reason, $booked_by);
     $query->execute();
-    return $db_1->insert_id;
+    $insert_id = $db_1->insert_id;
+    $query->close();
+    return $insert_id;
 }
 
-function update_student_profile($patient_id, $phone, $email, $password = null) {
+function update_student_profile($patient_id, $data, $password = null, $profile_image = null) {
     global $db_1;
-    if ($password) {
-        $hashed = password_hash($password, PASSWORD_BCRYPT);
-        $sql = "UPDATE patients SET phone = ?, email = ?, hashed_password = ? WHERE id = ?";
-        $q = $db_1->prepare($sql);
-        $q->bind_param("sssi", $phone, $email, $hashed, $patient_id);
-    } else {
-        $sql = "UPDATE patients SET phone = ?, email = ? WHERE id = ?";
-        $q = $db_1->prepare($sql);
-        $q->bind_param("ssi", $phone, $email, $patient_id);
+    $patient_id = (int)$patient_id;
+    if ($patient_id <= 0) return false;
+
+    if (!is_array($data)) {
+        // Backwards compatibility with old signature ($patient_id, $phone, $email, $password = null)
+        $phone = $data;
+        $email = $password;
+        $pwd = func_num_args() > 3 ? func_get_arg(3) : null;
+        if ($pwd) {
+            $hashed = password_hash($pwd, PASSWORD_BCRYPT);
+            $sql = "UPDATE patients SET phone = ?, email = ?, hashed_password = ? WHERE id = ?";
+            $q = $db_1->prepare($sql);
+            $q->bind_param("sssi", $phone, $email, $hashed, $patient_id);
+        } else {
+            $sql = "UPDATE patients SET phone = ?, email = ? WHERE id = ?";
+            $q = $db_1->prepare($sql);
+            $q->bind_param("ssi", $phone, $email, $patient_id);
+        }
+        return $q->execute();
     }
-    return $q->execute();
+
+    // $data is an associative array of student fields
+    $fields = [];
+    $types = '';
+    $values = [];
+
+    $allowed = [
+        'first_name', 'surname', 'middle_name',
+        'gender', 'date_of_birth', 'nationality', 'state_of_origin', 'lga', 'marital_status',
+        'phone', 'alternate_phone', 'email', 'address', 'city', 'residential_state',
+        'faculty', 'department', 'level',
+        'blood_group', 'genotype', 'allergies', 'chronic_conditions', 'disabilities',
+        'next_of_kin_name', 'next_of_kin_relationship', 'next_of_kin_phone'
+    ];
+
+    foreach ($allowed as $field) {
+        if (isset($data[$field])) {
+            $val = trim($data[$field]);
+            $fields[] = "$field = ?";
+            $types .= 's';
+            if ($field === 'date_of_birth' && empty($val)) {
+                $values[] = null;
+            } else {
+                $values[] = $val;
+            }
+        }
+    }
+
+    if (!empty($profile_image)) {
+        $fields[] = "profile_image = ?";
+        $types .= 's';
+        $values[] = $profile_image;
+    }
+
+    if (!empty($password)) {
+        $fields[] = "hashed_password = ?";
+        $types .= 's';
+        $values[] = password_hash($password, PASSWORD_BCRYPT);
+    }
+
+    $res = true;
+    if (!empty($fields)) {
+        $sql = "UPDATE patients SET " . implode(", ", $fields) . " WHERE id = ? LIMIT 1";
+        $types .= 'i';
+        $values[] = $patient_id;
+
+        $stmt = $db_1->prepare($sql);
+        if (!$stmt) {
+            error_log("update_student_profile prepare failed: " . $db_1->error);
+            return false;
+        }
+
+        $stmt->bind_param($types, ...$values);
+        $res = $stmt->execute();
+        if (!$res) {
+            error_log("update_student_profile execute failed: " . $stmt->error);
+        }
+        $stmt->close();
+    }
+
+    // Keep patient_emergency_contacts in sync with Next of Kin details
+    $emName = trim($data['emergency_contact_name'] ?? $data['next_of_kin_name'] ?? '');
+    $emPhone = trim($data['emergency_contact_phone'] ?? $data['next_of_kin_phone'] ?? '');
+    $emRel = trim($data['emergency_contact_relationship'] ?? $data['next_of_kin_relationship'] ?? '');
+
+    if (!empty($emName) && !empty($emPhone)) {
+        $chk = $db_1->prepare("SELECT id FROM patient_emergency_contacts WHERE patient_id = ? AND is_primary = 1 LIMIT 1");
+        if ($chk) {
+            $chk->bind_param("i", $patient_id);
+            $chk->execute();
+            $chkRes = $chk->get_result();
+            if ($chkRow = $chkRes->fetch_assoc()) {
+                $emId = (int)$chkRow['id'];
+                $chk->close();
+                $updEm = $db_1->prepare("UPDATE patient_emergency_contacts SET contact_name = ?, relationship = ?, phone = ? WHERE id = ?");
+                if ($updEm) {
+                    $updEm->bind_param("sssi", $emName, $emRel, $emPhone, $emId);
+                    $updEm->execute();
+                    $updEm->close();
+                }
+            } else {
+                $chk->close();
+                $insEm = $db_1->prepare("INSERT INTO patient_emergency_contacts (patient_id, contact_name, relationship, phone, is_primary) VALUES (?, ?, ?, ?, 1)");
+                if ($insEm) {
+                    $insEm->bind_param("isss", $patient_id, $emName, $emRel, $emPhone);
+                    $insEm->execute();
+                    $insEm->close();
+                }
+            }
+        }
+    }
+
+    return $res;
 }
 
 function get_student_medical_records($patient_id) {

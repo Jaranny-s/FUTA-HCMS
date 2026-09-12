@@ -82,9 +82,25 @@ $role = $_SESSION['staff_role'] ?? '';
                 <i class="bi bi-people"></i> Patients Directory
             </a>
 
-            <div class="nav-section-label">Reports</div>
+            <?php if($role === 'super_admin'): ?>
+            <div class="nav-section-label">Clinical Overview</div>
+            <a href="<?php echo url_wrap('/modules/reception/check_in.php'); ?>" class="nav-item <?php if(strpos($dir_path, 'reception') !== false) echo 'active'; ?>">
+                <i class="bi bi-person-bounding-box"></i> Reception
+            </a>
+            <a href="<?php echo url_wrap('/modules/encounters/index.php'); ?>" class="nav-item <?php if(strpos($dir_path, 'encounters') !== false) echo 'active'; ?>">
+                <i class="bi bi-heart-pulse"></i> Encounters
+            </a>
+            <a href="<?php echo url_wrap('/modules/pharmacy/index.php'); ?>" class="nav-item <?php if(strpos($dir_path, 'pharmacy') !== false) echo 'active'; ?>">
+                <i class="bi bi-capsule"></i> Pharmacy Queue
+            </a>
+            <?php endif; ?>
+
+            <div class="nav-section-label">Reports & Settings</div>
             <a href="<?php echo url_wrap('/staff/admin/activity_logs.php'); ?>" class="nav-item <?php if($current_script == 'activity_logs.php') echo 'active'; ?>">
                 <i class="bi bi-journal-text"></i> Activity Logs
+            </a>
+            <a href="<?php echo url_wrap('/staff/admin/settings.php'); ?>" class="nav-item <?php if($current_script == 'settings.php') echo 'active'; ?>">
+                <i class="bi bi-gear"></i> System Settings
             </a>
 
         <?php else: ?>

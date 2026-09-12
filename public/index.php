@@ -67,7 +67,7 @@ $page_title = 'Student Portal Login';
         <img src="<?php echo url_wrap('/assets/images/futa_logo.png'); ?>" width='120' height='120' />
       </div>
       
-      <div class="login-form" style="height: 480px;">
+      <div class="login-form">
         <p>Student Self-Service Portal</p>
         <br />
         <p>Enter your Matriculation Number and Password below.</p>
@@ -86,9 +86,7 @@ $page_title = 'Student Portal Login';
                 <a href="#" style="color:#0F4E74; text-decoration:none;" onclick="alert('Password reset link would be sent to your email.')">Forgotten Password?</a>
             </div>
             
-            <div class="errors">
-                <?php echo display_errors($errors); ?>
-            </div>
+            <?php echo display_errors($errors); ?>
             
             <div id="submit-response">
                 <input type="submit" name="submit" value="Log In" />

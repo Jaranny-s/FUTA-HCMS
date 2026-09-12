@@ -104,7 +104,7 @@ include(SHARED_PATH . '/header.php');
             </p>
 
             <?php if (!empty($patient['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('modules/patients/images/patient_pictures/' . v_wrap(ru_wrap($patient['profile_image']))); ?>" alt="Patient profile photo" class="patient-profile-header">
+            <img src="<?php echo url_wrap('modules/patients/images/patient_pictures/' . v_wrap(ru_wrap($patient['profile_image']))); ?>" alt="Patient profile photo" class="patient-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage)); ?>';">
             <?php } else { ?>
             <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage));?>" alt="No Patient photo uploaded" class="patient-profile-header">
             <?php } ?>
@@ -153,11 +153,13 @@ include(SHARED_PATH . '/header.php');
                 </span>
             </div>
             
+            <?php if (in_array($_SESSION['staff_role'] ?? '', ['receptionist', 'super_admin'])) { ?>
             <div style="text-align: right;">
                 <a href="<?php echo url_wrap('/modules/reception/check_in.php?patient_id=' . $patient['id']); ?>" class="btn btn-primary" style="background:#1bc03d; color:white; border:none; padding:10px 15px; border-radius:5px; text-decoration:none;">
                     <i class="bi bi-calendar-check"></i> Check-in Patient
                 </a>
             </div>
+            <?php } ?>
             
         </div>
 

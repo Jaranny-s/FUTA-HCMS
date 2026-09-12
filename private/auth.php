@@ -63,23 +63,32 @@ function require_password_reset() {
 
     if (!is_logged_in()) {
         redirect_to(url_wrap('/staff/login.php'));
-    } else {
-  // Do nothing, let the rest of the page proceed 
-  }
+    }
 
-    $sql = "SELECT password_reset_required FROM staff WHERE id = ?";
+    $sql = "SELECT password_reset_required, status FROM staff WHERE id = ?";
     $query = $db_1->prepare($sql);
     $query->bind_param("i", $_SESSION['staff_id']);
     $query->execute();
-    $query->bind_result($reset_required);
+    $query->bind_result($reset_required, $status);
     $query->fetch();
     $query->close();
 
+    // Check if account has been deactivated
+    if (!empty($status) && strtolower($status) === 'inactive') {
+        $actorId = $_SESSION['staff_id'];
+        logAction($actorId, 'KICKED_INACTIVE', 'staff', $actorId);
+        unset($_SESSION['staff_id']);
+        unset($_SESSION['last_login']);
+        unset($_SESSION['email']);
+        unset($_SESSION['role_id']);
+        unset($_SESSION['staff_role']);
+        $_SESSION['error'] = "Your account has been deactivated. Please contact an administrator.";
+        redirect_to(url_wrap('/staff/login.php'));
+    }
+
     if ($reset_required == 1) {
         redirect_to(url_wrap('/staff/reset_password.php'));
-    } else {
-  // Do nothing, let the rest of the page proceed 
-  }
+    }
 }
 
 

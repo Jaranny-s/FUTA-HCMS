@@ -2,7 +2,7 @@
 require_once('../../../private/config.php');
 require_password_reset();
 
-if (!isset($_SESSION['staff_role']) || ($_SESSION['staff_role'] !== 'receptionist' && $_SESSION['staff_role'] !== 'admin')) {
+if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], ['receptionist', 'admin', 'super_admin'])) {
     $_SESSION['error'] = "Access Denied: Billing is restricted to Reception and Admin.";
     redirect_to(url_wrap('/staff/dashboard.php'));
 }

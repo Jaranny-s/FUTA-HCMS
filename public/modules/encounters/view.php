@@ -16,15 +16,51 @@ if (!$encounter) {
 
 $encounter_id = $encounter['id'];
 
+// --- Doctor Authorization ---
+// Doctors can VIEW any encounter (for referral/handover context)
+// but can only WRITE (consultation, diagnosis, prescription) to their OWN encounters.
+$current_role = $_SESSION['staff_role'] ?? '';
+$current_staff_id = $_SESSION['staff_id'] ?? null;
+$is_assigned_doctor = ($encounter['doctor_id'] == $current_staff_id);
+$is_doctor = ($current_role === 'doctor');
+$is_privileged = in_array($current_role, ['admin', 'super_admin', 'nurse']);
+
+// A doctor trying to perform a write action on someone else's encounter is blocked at form level.
+// We capture this flag and pass it to the UI so write buttons are hidden/disabled.
+$can_write_clinical = !$is_doctor || $is_assigned_doctor;
+$can_record_vitals = hasPermission('record_vitals') || hasPermission('edit_vitals') || in_array($current_role, ['nurse', 'doctor', 'admin', 'super_admin']);
+
 // Handle POST submissions
 if (is_post_request()) {
     $action = $_POST['action'] ?? '';
     $staff_id = $_SESSION['staff_id'];
 
+    // For any clinical write action by a doctor, enforce assignment
+    $clinical_write_actions = ['save_consultation', 'save_diagnosis', 'save_prescription', 'complete_encounter'];
+    if ($is_doctor && !$is_assigned_doctor && in_array($action, $clinical_write_actions)) {
+        $_SESSION['error'] = "Access Denied: You can only write clinical notes for encounters assigned to you.";
+        redirect_to(url_wrap("/modules/encounters/view.php?id={$encounter_id}"));
+    }
+
     if ($action === 'save_vitals') {
-        save_vitals($encounter_id, $staff_id, $_POST['temperature'], $_POST['weight'], $_POST['height'], $_POST['bmi'], $_POST['pulse'], $_POST['respiration'], $_POST['oxygen_saturation'], $_POST['systolic_bp'], $_POST['diastolic_bp']);
+        $temp = !empty($_POST['temperature']) ? (float)$_POST['temperature'] : null;
+        $weight = !empty($_POST['weight']) ? (float)$_POST['weight'] : null;
+        $height = !empty($_POST['height']) ? (float)$_POST['height'] : null;
+        $pulse = !empty($_POST['pulse']) ? (int)$_POST['pulse'] : null;
+        $respiration = !empty($_POST['respiration']) ? (int)$_POST['respiration'] : null;
+        $oxygen = !empty($_POST['oxygen_saturation']) ? (int)$_POST['oxygen_saturation'] : null;
+        $sys_bp = !empty($_POST['systolic_bp']) ? (int)$_POST['systolic_bp'] : null;
+        $dia_bp = !empty($_POST['diastolic_bp']) ? (int)$_POST['diastolic_bp'] : null;
+
+        $bmi = null;
+        if ($weight && $height && $height > 0) {
+            $height_m = $height / 100.0;
+            $bmi = round($weight / ($height_m * $height_m), 1);
+        }
+
+        save_vitals($encounter_id, $staff_id, $temp, $weight, $height, $bmi, $pulse, $respiration, $oxygen, $sys_bp, $dia_bp);
         update_encounter_status($encounter_id, 'In Progress');
-        $_SESSION['message'] = "Vitals saved successfully. Patient is ready for doctor consultation.";
+        $_SESSION['message'] = "Vitals recorded successfully. Patient is now in progress for doctor consultation.";
     } elseif ($action === 'save_nursing_note') {
         save_nursing_note($encounter_id, $staff_id, $_POST['notes']);
         $_SESSION['message'] = "Nursing note added.";
@@ -76,6 +112,16 @@ include(SHARED_PATH . '/header.php');
 
         <div><?php echo display_session_message(); ?></div>
 
+        <?php if ($is_doctor && !$is_assigned_doctor): ?>
+        <div style="background:#fff3cd; border:1px solid #ffc107; border-left:4px solid #e6a000; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+            <i class="bi bi-eye" style="font-size:1.3rem; color:#856404;"></i>
+            <div>
+                <strong style="color:#856404;">View-only mode.</strong>
+                <span style="color:#666; font-size:0.9rem;"> This encounter is assigned to <strong><?php echo v_wrap($encounter['doctor_name']); ?></strong>. You can read all records but cannot add or modify clinical entries.</span>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="patient-summary-card">
             <div class="patient-info">
                 <?php if (!empty($encounter['profile_image'])) { ?>
@@ -97,7 +143,7 @@ include(SHARED_PATH . '/header.php');
                 <span class="badge status-<?php echo str_replace(' ', '-', strtolower($encounter['status'])); ?>">
                     Status: <?php echo v_wrap($encounter['status']); ?>
                 </span>
-                <?php if ($encounter['status'] !== 'Completed' && hasPermission('edit_encounter')) { ?>
+                <?php if ($encounter['status'] !== 'Completed' && hasPermission('edit_encounter') && $can_write_clinical) { ?>
                 <form action="<?php echo url_wrap("/modules/encounters/view.php?id={$encounter_id}"); ?>" method="post" style="display:inline-block; margin-top: 10px;">
                     <input type="hidden" name="action" value="complete_encounter">
                     <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
@@ -122,41 +168,77 @@ include(SHARED_PATH . '/header.php');
             <div class="clinical-grid">
                 <!-- Left: Vitals Form/View -->
                 <div class="card">
-                    <h3>Patient Vitals</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0;">Patient Vitals</h3>
+                        <?php if ($vitals && $can_record_vitals) { ?>
+                            <button data-modal-target="addVitalsModal" class="btn" style="background:#0F4E74; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:0.85rem; cursor:pointer;">
+                                <i class="bi bi-pencil-square"></i> Update Vitals
+                            </button>
+                        <?php } ?>
+                    </div>
                     <?php if ($vitals) { ?>
-                        <div class="vitals-display">
-                            <p><strong>Temp:</strong> <?php echo v_wrap($vitals['temperature']); ?> °C</p>
-                            <p><strong>Weight:</strong> <?php echo v_wrap($vitals['weight']); ?> kg</p>
-                            <p><strong>BP:</strong> <?php echo v_wrap($vitals['systolic_bp'] . '/' . $vitals['diastolic_bp']); ?> mmHg</p>
-                            <p><strong>Pulse:</strong> <?php echo v_wrap($vitals['pulse']); ?> bpm</p>
-                            <p><strong>SpO2:</strong> <?php echo v_wrap($vitals['oxygen_saturation']); ?> %</p>
+                        <div class="vitals-display" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 5px;">
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">Blood Pressure</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['systolic_bp'] . '/' . $vitals['diastolic_bp']); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">mmHg</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">Temperature</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['temperature']); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">°C</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">Pulse Rate</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['pulse']); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">bpm</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">SpO2</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['oxygen_saturation']); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">%</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">Weight</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['weight']); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">kg</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">Height</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['height']); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">cm</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">BMI</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['bmi'] ?? 'N/A'); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">kg/m²</span></strong>
+                            </div>
+                            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;">
+                                <small style="color:#666; display:block;">Respiration</small>
+                                <strong style="font-size:1.05rem; color:#0F4E74;"><?php echo v_wrap($vitals['respiration'] ?? 'N/A'); ?> <span style="font-size:0.75rem; font-weight:normal; color:#666;">cpm</span></strong>
+                            </div>
                         </div>
                     <?php } else { ?>
-                        <?php if (hasPermission('add_vitals')) { ?>
-                            <button data-modal-target="addVitalsModal" class="btn btn-primary" style="margin-bottom:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Record New Vitals</button>
-                            
-                            <!-- Add Vitals Modal -->
-                            <div id="addVitalsModal" class="modal-overlay">
-                                <div class="modal-content">
-                                    <button class="modal-close" data-modal-close>&times;</button>
-                                    <h3 class="modal-title"><i class="bi bi-heart-pulse"></i> Record Patient Vitals</h3>
-                                    <form action="" method="post">
-                                        <input type="hidden" name="action" value="save_vitals">
-                                        <div class="form-grid">
-                                            <div class="form-group"><label>Temp (°C)</label><input type="number" step="0.1" name="temperature"></div>
-                                            <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" name="weight"></div>
-                                            <div class="form-group"><label>Height (cm)</label><input type="number" step="0.1" name="height"></div>
-                                            <div class="form-group"><label>Systolic BP</label><input type="number" name="systolic_bp"></div>
-                                            <div class="form-group"><label>Diastolic BP</label><input type="number" name="diastolic_bp"></div>
-                                            <div class="form-group"><label>Pulse (bpm)</label><input type="number" name="pulse"></div>
-                                            <div class="form-group"><label>SpO2 (%)</label><input type="number" name="oxygen_saturation"></div>
-                                            <div class="form-group"><label>Respiration</label><input type="number" name="respiration"></div>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width:100%;">Save Vitals</button>
-                                    </form>
+                        <?php if ($can_record_vitals) { ?>
+                            <button data-modal-target="addVitalsModal" class="btn btn-primary" style="margin-bottom:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">+ Record New Vitals</button>
+                        <?php } else { echo "<p style='color:#666;'>No vitals recorded yet.</p>"; } ?>
+                    <?php } ?>
+
+                    <!-- Add/Update Vitals Modal -->
+                    <?php if ($can_record_vitals) { ?>
+                    <div id="addVitalsModal" class="modal-overlay">
+                        <div class="modal-content" style="max-width:550px;">
+                            <button class="modal-close" data-modal-close>&times;</button>
+                            <h3 class="modal-title"><i class="bi bi-heart-pulse"></i> <?php echo $vitals ? 'Update' : 'Record'; ?> Patient Vitals</h3>
+                            <form action="" method="post">
+                                <input type="hidden" name="action" value="save_vitals">
+                                <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                    <div class="form-group"><label>Temperature (°C)</label><input type="number" step="0.1" name="temperature" value="<?php echo htmlspecialchars($vitals['temperature'] ?? ''); ?>" placeholder="e.g. 36.8" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" name="weight" value="<?php echo htmlspecialchars($vitals['weight'] ?? ''); ?>" placeholder="e.g. 68.5" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>Height (cm)</label><input type="number" step="0.1" name="height" value="<?php echo htmlspecialchars($vitals['height'] ?? ''); ?>" placeholder="e.g. 175" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>Pulse (bpm)</label><input type="number" name="pulse" value="<?php echo htmlspecialchars($vitals['pulse'] ?? ''); ?>" placeholder="e.g. 72" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>Systolic BP (mmHg)</label><input type="number" name="systolic_bp" value="<?php echo htmlspecialchars($vitals['systolic_bp'] ?? ''); ?>" placeholder="e.g. 120" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>Diastolic BP (mmHg)</label><input type="number" name="diastolic_bp" value="<?php echo htmlspecialchars($vitals['diastolic_bp'] ?? ''); ?>" placeholder="e.g. 80" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>SpO2 (% Oxygen)</label><input type="number" name="oxygen_saturation" value="<?php echo htmlspecialchars($vitals['oxygen_saturation'] ?? ''); ?>" placeholder="e.g. 98" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
+                                    <div class="form-group"><label>Respiration (breaths/min)</label><input type="number" name="respiration" value="<?php echo htmlspecialchars($vitals['respiration'] ?? ''); ?>" placeholder="e.g. 16" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:5px;"></div>
                                 </div>
-                            </div>
-                        <?php } else { echo "<p>No vitals recorded yet.</p>"; } ?>
+                                <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width:100%; cursor:pointer; font-weight:600;">Save Vitals</button>
+                            </form>
+                        </div>
+                    </div>
                     <?php } ?>
                 </div>
 
@@ -201,26 +283,31 @@ include(SHARED_PATH . '/header.php');
                     
                     <div class="form-group">
                         <label>History of Present Illness</label>
-                        <textarea name="hpi" rows="4" style="width:100%; border-radius:5px; padding:10px;"><?php echo v_wrap($consultation['history_of_present_illness'] ?? ''); ?></textarea>
+                        <textarea name="hpi" rows="4" style="width:100%; border-radius:5px; padding:10px;" <?php if(!$can_write_clinical) echo 'readonly'; ?>><?php echo v_wrap($consultation['history_of_present_illness'] ?? ''); ?></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label>Physical Examination</label>
-                        <textarea name="exam" rows="3" style="width:100%; border-radius:5px; padding:10px;"><?php echo v_wrap($consultation['physical_examination'] ?? ''); ?></textarea>
+                        <textarea name="exam" rows="3" style="width:100%; border-radius:5px; padding:10px;" <?php if(!$can_write_clinical) echo 'readonly'; ?>><?php echo v_wrap($consultation['physical_examination'] ?? ''); ?></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label>Assessment</label>
-                        <textarea name="assessment" rows="2" style="width:100%; border-radius:5px; padding:10px;"><?php echo v_wrap($consultation['assessment'] ?? ''); ?></textarea>
+                        <textarea name="assessment" rows="2" style="width:100%; border-radius:5px; padding:10px;" <?php if(!$can_write_clinical) echo 'readonly'; ?>><?php echo v_wrap($consultation['assessment'] ?? ''); ?></textarea>
                     </div>
                     
                     <div class="form-group">
                         <label>Management Plan</label>
-                        <textarea name="plan" rows="3" style="width:100%; border-radius:5px; padding:10px;"><?php echo v_wrap($consultation['management_plan'] ?? ''); ?></textarea>
+                        <textarea name="plan" rows="3" style="width:100%; border-radius:5px; padding:10px;" placeholder="e.g. Advise rest, dietary adjustments, prescribed medication..." <?php if(!$can_write_clinical) echo 'readonly'; ?>><?php echo v_wrap($consultation['management_plan'] ?? ''); ?></textarea>
                     </div>
 
-                    <?php if (hasPermission('edit_consultation')) { ?>
-                        <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">Save Consultation</button>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label>Follow-up Instructions / Patient Advice</label>
+                        <textarea name="follow_up" rows="2" style="width:100%; border-radius:5px; padding:10px;" placeholder="e.g. Return for routine BP review in 2 weeks, or sooner if feeling unwell." <?php if(!$can_write_clinical) echo 'readonly'; ?>><?php echo v_wrap($consultation['follow_up_instructions'] ?? ''); ?></textarea>
+                    </div>
+
+                    <?php if (hasPermission('edit_consultation') && $can_write_clinical) { ?>
+                        <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:600;">Save Consultation</button>
                     <?php } ?>
                 </form>
             </div>
@@ -243,7 +330,7 @@ include(SHARED_PATH . '/header.php');
                     <?php } ?>
                 </table>
 
-                <?php if (hasPermission('add_diagnosis')) { ?>
+                <?php if (hasPermission('add_diagnosis') && $can_write_clinical) { ?>
                 <button data-modal-target="addDiagnosisModal" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Add Diagnosis</button>
                 
                 <!-- Add Diagnosis Modal -->
@@ -298,7 +385,7 @@ include(SHARED_PATH . '/header.php');
                     <?php } ?>
                 </table>
 
-                <?php if (hasPermission('add_prescription')) { ?>
+                <?php if (hasPermission('add_prescription') && $can_write_clinical) { ?>
                 <button data-modal-target="addPrescriptionModal" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Write Prescription</button>
                 
                 <!-- Add Prescription Modal -->

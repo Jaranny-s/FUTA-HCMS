@@ -24,13 +24,28 @@ if (!$patient) {
 
 $emergency = find_primary_emergency_contact($id);
 if ($emergency) {
-    $patient['emergency_contact_name'] = $emergency['name'];
-    $patient['emergency_contact_phone'] = $emergency['phone'];
-    $patient['emergency_contact_relationship'] = $emergency['relationship'];
+    $patient['emergency_contact_name'] = $emergency['contact_name'] ?? $emergency['name'] ?? '';
+    $patient['emergency_contact_phone'] = $emergency['phone'] ?? '';
+    $patient['emergency_contact_relationship'] = $emergency['relationship'] ?? '';
 } else {
-    $patient['emergency_contact_name'] = '';
-    $patient['emergency_contact_phone'] = '';
-    $patient['emergency_contact_relationship'] = '';
+    $patient['emergency_contact_name'] = $patient['next_of_kin_name'] ?? '';
+    $patient['emergency_contact_phone'] = $patient['next_of_kin_phone'] ?? '';
+    $patient['emergency_contact_relationship'] = $patient['next_of_kin_relationship'] ?? '';
+}
+
+// Check and attach principal patient details if Dependant has principal_patient_id
+if (!empty($patient['principal_patient_id'])) {
+    $principal = find_patient_by_id((int)$patient['principal_patient_id']);
+    if ($principal) {
+        $patient['principal_display'] = [
+            'id' => (int)$principal['id'],
+            'patient_id' => $principal['patient_id'] ?? '',
+            'full_name' => trim(($principal['surname'] ?? '') . ' ' . ($principal['first_name'] ?? '') . ' ' . ($principal['middle_name'] ?? '')),
+            'staff_number' => $principal['staff_number'] ?? '',
+            'department' => $principal['department'] ?? '',
+            'profile_image' => $principal['profile_image'] ?? ''
+        ];
+    }
 }
 
 // Ensure non-null values for JSON safely

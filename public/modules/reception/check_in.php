@@ -16,6 +16,7 @@ if (is_post_request()) {
     $patient_id = $_POST['patient_id'] ?? '';
     $doctor_id = $_POST['doctor_id'] ?? '';
     $priority = $_POST['priority'] ?? 'Normal';
+    $appt_id = $_POST['appt_id'] ?? '';
     
     if (is_blank($patient_id) || is_blank($doctor_id)) {
         $_SESSION['error'] = "Patient and Doctor must be selected.";
@@ -23,6 +24,11 @@ if (is_post_request()) {
     } else {
         $created_by = $_SESSION['staff_id'];
         $encounter_id = create_encounter($patient_id, $doctor_id, null, $priority, $created_by);
+        
+        if (!is_blank($appt_id)) {
+            $db_1->query("UPDATE appointments SET status = 'Checked In', doctor_id = '$doctor_id' WHERE id = '$appt_id'");
+        }
+        
         $_SESSION['message'] = "Patient successfully checked in! Encounter Created.";
         redirect_to(url_wrap('/modules/encounters/index.php'));
     }
@@ -47,13 +53,44 @@ include(SHARED_PATH . '/header.php');
         <div><?php echo display_session_message(); ?></div>
         <?php if (isset($_SESSION['error'])) { echo "<div style='color:#d9534f; background:#f9eded; padding:15px; border-radius:8px; margin-bottom:20px; font-weight:500;'><i class='bi bi-exclamation-triangle-fill'></i> {$_SESSION['error']}</div>"; unset($_SESSION['error']); } ?>
 
-        <div style="background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; max-width: 800px; margin: 0 auto; border: 1px solid #eee;">
+        <?php
+        // Fetch pending appointments
+        $app_query = $db_1->query("SELECT a.*, p.patient_id as pid, p.first_name, p.surname FROM appointments a JOIN patients p ON a.patient_id = p.id WHERE a.status = 'Pending' ORDER BY a.appointment_date ASC");
+        if ($app_query && $app_query->num_rows > 0) {
+        ?>
+        <div style="background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; max-width: 800px; margin: 0 auto 30px auto; border: 1px solid #eee;">
+            <div style="background: linear-gradient(135deg, #1a7bb5 0%, #0F4E74 100%); padding: 20px; color: white;">
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 400;"><i class="bi bi-calendar-check" style="margin-right: 10px;"></i> Pending Appointments</h3>
+            </div>
+            <table class="staff-list" style="width: 100%; border-collapse: collapse; padding: 20px;">
+                <tr>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Patient</th>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Date & Time</th>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Reason</th>
+                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">Action</th>
+                </tr>
+                <?php while($app = $app_query->fetch_assoc()) { ?>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo v_wrap($app['pid'] . ' - ' . $app['surname'] . ' ' . $app['first_name']); ?></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo date('M d, Y h:i A', strtotime($app['appointment_date'])); ?></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo v_wrap($app['reason']); ?></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                        <button onclick="document.querySelector('select[name=patient_id]').value='<?php echo $app['patient_id']; ?>'; document.getElementById('appt_id_input').value='<?php echo $app['id']; ?>'; window.scrollTo(0, document.getElementById('check-in-form').offsetTop);" class="btn" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Select & Assign</button>
+                    </td>
+                </tr>
+                <?php } ?>
+            </table>
+        </div>
+        <?php } ?>
+
+        <div id="check-in-form" style="background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; max-width: 800px; margin: 0 auto; border: 1px solid #eee;">
             <div style="background: linear-gradient(135deg, #0F4E74 0%, #1a7bb5 100%); padding: 30px; color: white;">
                 <h3 style="margin: 0; font-size: 1.5rem; font-weight: 400;"><i class="bi bi-person-bounding-box" style="margin-right: 10px; opacity: 0.8;"></i> Create New Encounter</h3>
                 <p style="margin: 10px 0 0 0; opacity: 0.8; font-size: 0.9rem;">Fill in the details below to assign a patient to the clinic queue.</p>
             </div>
             
             <form action="<?php echo url_wrap('/modules/reception/check_in.php'); ?>" method="post" style="padding: 30px;">
+                <input type="hidden" name="appt_id" id="appt_id_input" value="">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
                     <div class="form-group" style="margin: 0;">
@@ -61,7 +98,7 @@ include(SHARED_PATH . '/header.php');
                         <select name="patient_id" required style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; background-color: #fcfcfc;">
                             <option value="">-- Choose Patient --</option>
                             <?php while($p = $patients->fetch_assoc()) { ?>
-                                <option value="<?php echo $p['id']; ?>">
+                                <option value="<?php echo $p['id']; ?>" <?php if(isset($_GET['patient_id']) && (int)$_GET['patient_id'] === (int)$p['id']) echo 'selected'; ?>>
                                     <?php echo v_wrap($p['patient_id'] . ' - ' . $p['surname'] . ' ' . $p['first_name']); ?>
                                 </option>
                             <?php } ?>

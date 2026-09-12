@@ -2,7 +2,8 @@
 require_once('../../../private/config.php');
 require_password_reset();
 
-if (!hasPermission('create_patient')) {
+$allowedRoles = ['receptionist', 'admin', 'super_admin'];
+if (!in_array($_SESSION['staff_role'] ?? '', $allowedRoles) && !hasPermission('create_patient')) {
     $_SESSION['error'] = "Access Denied: You do not have permission to register patients.";
     redirect_to(url_wrap('/modules/patients/index.php'));
 }
@@ -13,25 +14,23 @@ if (is_post_request()) {
     $patient['profile_image'] = null;
 
     // Handle Image Upload
-    if (!empty($_FILES['profile_image']['name'])) {
-        $original_name = $_FILES['profile_image']['name'];
-        $tmp_path = $_FILES['profile_image']['tmp_name'];
-        $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        if (in_array($ext, $allowed)) {
-            $image_name = 'patient_' . time() . '.' . $ext;
-            $destination = __DIR__ . '/images/patient_pictures/' . $image_name;
-            move_uploaded_file($tmp_path, $destination);
-            $patient['profile_image'] = $image_name;
+    if (!empty($_FILES['profile_image']['name']) && $_FILES['profile_image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $uploadResult = upload_patient_image($_FILES['profile_image']);
+        if (!$uploadResult['success']) {
+            $_SESSION['error'] = $uploadResult['error'];
+            redirect_to(url_wrap('/modules/patients/index.php'));
+        } else {
+            $patient['profile_image'] = $uploadResult['filename'];
         }
     }
 
     $result = insert_patient($patient);
-    if ($result['success'] === true) {
+    if (isset($result['success']) && $result['success'] === true) {
         $_SESSION['message'] = "Patient registered successfully!";
         redirect_to(url_wrap('/modules/patients/index.php'));
     } else {
-        $_SESSION['error'] = "Failed to register patient: " . implode(" ", $result);
+        $msg = is_array($result) ? implode(" ", $result) : "An unexpected error occurred.";
+        $_SESSION['error'] = "Failed to register patient: " . $msg;
         redirect_to(url_wrap('/modules/patients/index.php'));
     }
 } else {

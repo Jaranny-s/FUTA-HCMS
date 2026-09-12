@@ -3,15 +3,32 @@ require_once('../../private/config.php');
 
 require_password_reset(); // user must be logged in
 
-// Only admin should do this
-if ($_SESSION['role_id'] !== 1) {
+// Only admin or super_admin should do this
+$canAdminReset = (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === 1) || ($_SESSION['staff_role'] ?? '') === 'super_admin';
+if (!$canAdminReset) {
     redirect_to(url_wrap('/staff/dashboard.php'));
+    exit;
 }
 
 $staff_id = $_POST['staff_id'] ?? null;
 
 if (!$staff_id) {
     redirect_to(url_wrap('/staff/index.php'));
+    exit;
+}
+
+$targetStaff = find_staff_by_id($staff_id);
+if (!$targetStaff) {
+    $_SESSION['error'] = "Staff account not found.";
+    redirect_to(url_wrap('/staff/index.php'));
+    exit;
+}
+
+// Protect super_admin account: only super_admin can reset super_admin password
+if (($targetStaff['role'] === 'super_admin' || $targetStaff['role_id'] == 6) && ($_SESSION['staff_role'] ?? '') !== 'super_admin') {
+    $_SESSION['error'] = "Unauthorized: Only Super Admin can reset password for Super Admin accounts.";
+    redirect_to(url_wrap('/staff/view.php?id=' . $staff_id));
+    exit;
 }
 
 // Generate temp password

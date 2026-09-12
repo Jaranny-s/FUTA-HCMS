@@ -89,7 +89,7 @@ include(SHARED_PATH . '/header.php'); ?>
 
             <div class="form-group" style="margin-bottom: 15px;">
                 <label>Role *</label>
-                <select name="role" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                <select name="role" id="staff_role_select" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
                     <option value="" disabled selected>Select staff role</option>
                     <option value="admin">Admin</option>
                     <option value="doctor">Doctor</option>
@@ -101,7 +101,9 @@ include(SHARED_PATH . '/header.php'); ?>
             
             <div class="form-group" style="margin-bottom: 15px;">
                 <label>Department *</label>
-                <input type="text" name="department" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                <select name="department" id="staff_department_select" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                    <option value="">-- Select Role First --</option>
+                </select>
             </div>
             
             <div class="form-group" style="margin-bottom: 15px;">
@@ -113,6 +115,57 @@ include(SHARED_PATH . '/header.php'); ?>
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const roleDeptMap = {
+        'admin': [
+            'Health Centre Administration',
+            'NHIS/HMO Unit'
+        ],
+        'doctor': [
+            'General Outpatient Department (GOPD)',
+            'Specialist Clinics',
+            'Accident & Emergency (A&E) Unit'
+        ],
+        'nurse': [
+            'Nursing Services Department',
+            'Accident & Emergency (A&E) Unit',
+            'Observation / Inpatient Wards'
+        ],
+        'pharmacist': [
+            'Pharmacy Department'
+        ],
+        'receptionist': [
+            'Health Records / Medical Information Department'
+        ]
+    };
+
+    const roleSelect = document.getElementById('staff_role_select');
+    const deptSelect = document.getElementById('staff_department_select');
+
+    if (roleSelect && deptSelect) {
+        roleSelect.addEventListener('change', function() {
+            const role = this.value;
+            deptSelect.innerHTML = '';
+            
+            if (roleDeptMap[role]) {
+                roleDeptMap[role].forEach(function(dept) {
+                    const opt = document.createElement('option');
+                    opt.value = dept;
+                    opt.textContent = dept;
+                    deptSelect.appendChild(opt);
+                });
+            } else {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '-- Select Department --';
+                deptSelect.appendChild(opt);
+            }
+        });
+    }
+});
+</script>
     
 <?php } ?>
     
@@ -191,7 +244,7 @@ include(SHARED_PATH . '/header.php'); ?>
         
         <tr>
           <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -199,7 +252,7 @@ include(SHARED_PATH . '/header.php'); ?>
                  style=" border: 1.5px solid red;"
                  <?php } ?>>
             <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                  <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -212,9 +265,13 @@ include(SHARED_PATH . '/header.php'); ?>
           <td><?php echo v_wrap($staff['email']); ?></td>
           <td><?php echo v_wrap($staff['department']); ?></td>
           <td><?php echo v_wrap($staff['created_at']); ?></td>
-          <td><a class="view-staff" href="<?php echo url_wrap('/staff/view.php?id=' . v_wrap(u_wrap($staff['id']))); ?>"><i class="bi bi-eye"></i></a></td>
-          <td><a class="edit-staff" href="<?php echo url_wrap('/staff/edit.php?id=' . v_wrap(u_wrap($staff['id']))); ?>"><i class="bi bi-pencil-square"></i></a></td>
-          <td><?php if (hasPermission('delete_staff')) { ?><span class="open-delete-tab" data-id="<?php echo v_wrap($staff['id']); ?>" data-name="<?php echo v_wrap($staff['full_name']); ?>" style="cursor:pointer;" ><i class="bi bi-trash"></i></span><?php } ?></td>
+          <?php 
+          $isRowSuperAdmin = ($staff['role'] === 'super_admin');
+          $canManageRow = !$isRowSuperAdmin || (($_SESSION['staff_role'] ?? '') === 'super_admin');
+          ?>
+          <td><?php if ($canManageRow) { ?><a class="view-staff" href="<?php echo url_wrap('/staff/view.php?id=' . v_wrap(u_wrap($staff['id']))); ?>"><i class="bi bi-eye"></i></a><?php } else { echo '-'; } ?></td>
+          <td><?php if ($canManageRow) { ?><a class="edit-staff" href="<?php echo url_wrap('/staff/edit.php?id=' . v_wrap(u_wrap($staff['id']))); ?>"><i class="bi bi-pencil-square"></i></a><?php } else { echo '-'; } ?></td>
+          <td><?php if ($canManageRow && hasPermission('delete_staff')) { ?><span class="open-delete-tab" data-id="<?php echo v_wrap($staff['id']); ?>" data-name="<?php echo v_wrap($staff['full_name']); ?>" style="cursor:pointer;" ><i class="bi bi-trash"></i></span><?php } else { echo '-'; } ?></td>
     	  </tr>
       <?php } // close while statement ?>
        </table>
@@ -274,7 +331,7 @@ include(SHARED_PATH . '/header.php'); ?>
         
         <tr>
           <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -282,7 +339,7 @@ include(SHARED_PATH . '/header.php'); ?>
                  style=" border: 1.5px solid red;"
                  <?php } ?>>
             <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                  <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -356,7 +413,7 @@ include(SHARED_PATH . '/header.php'); ?>
         
         <tr>
           <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -364,7 +421,7 @@ include(SHARED_PATH . '/header.php'); ?>
                  style=" border: 1.5px solid red;"
                  <?php } ?>>
             <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                  <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -439,7 +496,7 @@ include(SHARED_PATH . '/header.php'); ?>
         
         <tr>
           <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -447,7 +504,7 @@ include(SHARED_PATH . '/header.php'); ?>
                  style=" border: 1.5px solid red;"
                  <?php } ?>>
             <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                  <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -521,7 +578,7 @@ include(SHARED_PATH . '/header.php'); ?>
         
         <tr>
           <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -529,7 +586,7 @@ include(SHARED_PATH . '/header.php'); ?>
                  style=" border: 1.5px solid red;"
                  <?php } ?>>
             <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail"
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                  <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>

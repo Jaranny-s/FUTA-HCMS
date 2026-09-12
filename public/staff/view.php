@@ -8,14 +8,34 @@ $temp_password = $_SESSION['temp_password'] ?? null;
 //unset($_SESSION['temp_password']);
 ?>
 <?php 
-$id = $_GET['id'] ?? 'This id is unavailable';
+$id = $_GET['id'] ?? null;
+if (!$id) {
+    redirect_to(url_wrap('/staff/index.php'));
+    exit();
+}
 $staff = find_staff_by_id($id);
+if (!$staff) {
+    $_SESSION['error'] = "Staff account not found.";
+    redirect_to(url_wrap('/staff/index.php'));
+    exit();
+}
+
+// Protect super_admin account: only super_admin can view
+if (($staff['role'] === 'super_admin' || $staff['role_id'] == 6) && ($_SESSION['staff_role'] ?? '') !== 'super_admin') {
+    $_SESSION['error'] = "Access Denied: Only Super Admin can view Super Admin accounts.";
+    redirect_to(url_wrap('/staff/index.php'));
+    exit();
+}
+
 $page_title = v_wrap($staff['full_name']);
 $defaultStaffImage = 'default_profile_pic.png'; ?>
 
+<?php
+include(SHARED_PATH . '/header.php'); ?>
+
 <?php if ($temp_password): ?>
 <!-- Temp Password Modal - auto-opens on page load -->
-<div id="tempPasswordModal" class="modal-overlay" style="display:flex;">
+<div id="tempPasswordModal" class="modal-overlay active">
     <div class="modal-content" style="max-width: 480px; text-align: center;">
         <div style="background: linear-gradient(135deg, #0F4E74 0%, #1a7bb5 100%); border-radius: 10px 10px 0 0; margin: -30px -30px 25px; padding: 30px;">
             <i class="bi bi-shield-lock" style="font-size: 3rem; color: white; opacity: 0.9;"></i>
@@ -36,7 +56,7 @@ $defaultStaffImage = 'default_profile_pic.png'; ?>
             Store this immediately and send it to the staff member. It will not be shown again.
         </p>
         
-        <button onclick="document.getElementById('tempPasswordModal').style.display='none'" style="background: #0F4E74; color: white; border: none; border-radius: 8px; padding: 12px 40px; cursor: pointer; font-size: 1rem; font-weight: 600; width: 100%;">
+        <button onclick="document.getElementById('tempPasswordModal').classList.remove('active')" style="background: #0F4E74; color: white; border: none; border-radius: 8px; padding: 12px 40px; cursor: pointer; font-size: 1rem; font-weight: 600; width: 100%;">
             I've Saved the Password
         </button>
     </div>
@@ -66,9 +86,10 @@ function copyTempPassword() {
     });
 }
 </script>
-<?php endif; ?>
 <?php
-include(SHARED_PATH . '/header.php'); ?>
+// unset the password now that we have displayed it once
+unset($_SESSION['temp_password']);
+endif; ?>
 
 <div id="content">
   
@@ -117,14 +138,18 @@ include(SHARED_PATH . '/header.php'); ?>
     </dl>
     
     <dl>
-    <dt>Professional Headshot:</dt>
-    <dd><?php echo v_wrap($staff['profile_image']); ?></dd>
+    <dt>Account Status:</dt>
+    <dd>
+      <span class="badge" style="<?php echo strtolower($staff['status'] ?? 'active') === 'active' ? 'background:#e8f4fd; color:#0F4E74; border:1px solid #0F4E74; padding:3px 10px; border-radius:4px; font-weight:600;' : 'background:#fce8e6; color:#d93025; border:1px solid #d93025; padding:3px 10px; border-radius:4px; font-weight:600;'; ?>">
+        <?php echo ucfirst(v_wrap($staff['status'] ?? 'active')); ?>
+      </span>
+    </dd>
     </dl>
     </div>  
-        <?php if (!empty($staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="staff-profile-header">
+        <?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="staff-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';">
         <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="staff-profile-header">
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="staff-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';">
         <?php } ?>
         </div>
  </main>

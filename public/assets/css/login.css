@@ -51,17 +51,28 @@ html, body {
     z-index: 1;
     background: white;
     margin: 0 auto;
-    width: 400px;
-    height: 400px;
+    width: 420px;
+    max-width: 92%;
+    height: auto;
+    min-height: 380px;
+    padding: 30px 25px 35px 25px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     text-align: center;
+    box-sizing: border-box;
 }
 
 .login-form p:first-of-type {
-    font-size: 25px;   
+    font-size: 22px;
+    font-weight: 600;
+    color: #0F4E74;
+    margin: 0 0 5px 0;
 }
 
 .login-form p {
     font-size: 13px;
+    color: #555;
+    margin: 0 0 15px 0;
 }
 
 .login-form div {
@@ -94,14 +105,21 @@ html, body {
     color: white;
     background: #0F4E74; 
     border: 1px solid #0F4E74;
-    margin: 15px auto;
-    padding: 3px;
-    width: 60%;
-    height: 30px;
+    border-radius: 6px;
+    margin: 15px auto 5px auto;
+    padding: 6px 12px;
+    width: 65%;
+    height: 38px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: block;
+    box-sizing: border-box;
 }
 
 #submit-response input:hover {
-    background: #0F4E74;
+    background: #0b3c5d;
     border: 1px solid #63e3ff;
     color: #63e3ff;
     font-weight: bold;
@@ -112,14 +130,35 @@ html, body {
     position: relative;
     z-index: 1;
     margin-top: 20px;
-    width: 300px;
+    width: 320px;
     text-align: center;
 }
 
 .footnote p {
-    font-size: 13px;
+    font-size: 12px;
+    margin: 0;
 }
 
 .errors {
-    color: red;
+    color: #c5221f;
+    background: #fdf2f2;
+    border: 1px solid #f8b4b4;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 12px auto;
+    width: 75%;
+    font-size: 12px;
+    text-align: left;
+    box-sizing: border-box;
+    line-height: 1.4;
 }
+
+.errors ul {
+    margin: 5px 0 0 0;
+    padding-left: 18px;
+}
+
+.errors li {
+    margin-bottom: 2px;
+}
+

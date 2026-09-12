@@ -5,9 +5,30 @@ require_password_reset();
 $page_title = 'Encounters Dashboard';
 $specificCss = '/assets/css/encounters.css';
 
-// We can filter by status if passed in URL
+// We can filter by status and doctor assignment if passed in URL
 $status_filter = $_GET['status'] ?? null;
-$encounters = find_all_encounters($status_filter);
+$mine = isset($_GET['mine']) && $_GET['mine'] == '1';
+$current_role = $_SESSION['staff_role'] ?? '';
+$is_doctor = ($current_role === 'doctor');
+
+$my_encounters_count = 0;
+if ($is_doctor && isset($_SESSION['staff_id'])) {
+    $chk_q = $db_1->prepare("SELECT COUNT(*) FROM encounters WHERE doctor_id = ?");
+    $chk_q->bind_param("i", $_SESSION['staff_id']);
+    $chk_q->execute();
+    $chk_q->bind_result($my_encounters_count);
+    $chk_q->fetch();
+    $chk_q->close();
+}
+
+// If doctor tried to access ?mine=1 but has no encounters assigned, redirect with message
+if ($mine && $is_doctor && $my_encounters_count == 0) {
+    set_session_message("You currently have no patient encounters assigned to you.", "info");
+    redirect_to(url_wrap('/modules/encounters/index.php'));
+}
+
+$doctor_filter = ($mine && $is_doctor && $my_encounters_count > 0) ? $_SESSION['staff_id'] : null;
+$encounters = find_all_encounters($status_filter, $doctor_filter);
 
 include(SHARED_PATH . '/header.php'); 
 ?>
@@ -83,11 +104,27 @@ include(SHARED_PATH . '/header.php');
       <?php } ?>
     </div>
 
-    <div class="tabs" role="tablist">
-        <a href="?status=" class="tab-btn <?php echo !$status_filter ? 'active' : ''; ?>" style="text-decoration:none;">All</a>
-        <a href="?status=Waiting" class="tab-btn <?php echo $status_filter == 'Waiting' ? 'active' : ''; ?>" style="text-decoration:none;">Waiting (Nurse Queue)</a>
-        <a href="?status=In Progress" class="tab-btn <?php echo $status_filter == 'In Progress' ? 'active' : ''; ?>" style="text-decoration:none;">In Progress (Doctor)</a>
-        <a href="?status=Completed" class="tab-btn <?php echo $status_filter == 'Completed' ? 'active' : ''; ?>" style="text-decoration:none;">Completed</a>
+    <?php 
+    $mine_param = ($mine && $is_doctor && $my_encounters_count > 0) ? '&mine=1' : '';
+    ?>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <div class="tabs" role="tablist" style="margin-bottom: 0;">
+            <a href="?status=<?php echo $mine_param; ?>" class="tab-btn <?php echo !$status_filter ? 'active' : ''; ?>" style="text-decoration:none;">All</a>
+            <a href="?status=Waiting<?php echo $mine_param; ?>" class="tab-btn <?php echo $status_filter == 'Waiting' ? 'active' : ''; ?>" style="text-decoration:none;">Waiting (Nurse Queue)</a>
+            <a href="?status=In Progress<?php echo $mine_param; ?>" class="tab-btn <?php echo $status_filter == 'In Progress' ? 'active' : ''; ?>" style="text-decoration:none;">In Progress (Doctor)</a>
+            <a href="?status=Completed<?php echo $mine_param; ?>" class="tab-btn <?php echo $status_filter == 'Completed' ? 'active' : ''; ?>" style="text-decoration:none;">Completed</a>
+        </div>
+        
+        <?php if ($is_doctor && $my_encounters_count > 0) { ?>
+        <div style="display: flex; gap: 6px; background: #e9ecef; padding: 4px; border-radius: 6px;">
+            <a href="?status=<?php echo urlencode($status_filter ?? ''); ?>" style="text-decoration: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; font-weight: 600; <?php echo !$mine ? 'background: #0F4E74; color: white;' : 'color: #555;'; ?>">
+                <i class="bi bi-people"></i> All Clinic Encounters
+            </a>
+            <a href="?status=<?php echo urlencode($status_filter ?? ''); ?>&mine=1" style="text-decoration: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; font-weight: 600; <?php echo $mine ? 'background: #0F4E74; color: white;' : 'color: #555;'; ?>">
+                <i class="bi bi-person-badge"></i> My Encounters (<?php echo $my_encounters_count; ?>)
+            </a>
+        </div>
+        <?php } ?>
     </div>
 
     <div class="encounter-list-container">

@@ -59,24 +59,29 @@ function display_errors($errors=array()) {
  }
 
 function display_session_message() {
+    $output = '';
 
-    if (
-        isset($_SESSION['message']) &&
-        $_SESSION['message'] !== ''
-    ) {
-
+    if (isset($_SESSION['message']) && $_SESSION['message'] !== '') {
         $msg = $_SESSION['message'];
-
         unset($_SESSION['message']);
-
-        return "
-            <div id=\"status_message\" style=\"padding: 10px; background: white; color: #615cff; border: 2px solid #615cff; margin: 5px; border-radius: 6px; text-align: center; width: 500px; margin: 0 auto; \">
-                " . v_wrap($msg) . "
+        $output .= "
+            <div id=\"status_message\" class=\"session-status-message\" style=\"padding: 12px 18px; background: #e8f4fd; color: #0F4E74; border: 1.5px solid #0F4E74; margin: 10px auto; border-radius: 6px; text-align: center; max-width: 650px; font-weight: 500;\">
+                <i class=\"bi bi-check-circle-fill\" style=\"margin-right: 6px; color: #28a745;\"></i> " . v_wrap($msg) . "
             </div>
         ";
     }
 
-    return '';
+    if (isset($_SESSION['error']) && $_SESSION['error'] !== '') {
+        $errMsg = $_SESSION['error'];
+        unset($_SESSION['error']);
+        $output .= "
+            <div id=\"error_status_message\" class=\"session-error-message\" style=\"padding: 12px 18px; background: #fce8e6; color: #d93025; border: 1.5px solid #d93025; margin: 10px auto; border-radius: 6px; text-align: center; max-width: 650px; font-weight: 500;\">
+                <i class=\"bi bi-exclamation-triangle-fill\" style=\"margin-right: 6px; color: #d93025;\"></i> " . v_wrap($errMsg) . "
+            </div>
+        ";
+    }
+
+    return $output;
 }
 
 function display_temp_password() {

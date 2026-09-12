@@ -355,15 +355,16 @@ function insert_staff($staff) {
     $hashed_password = password_hash($temp_password, PASSWORD_DEFAULT);
     $role_id = get_role_id($staff); 
     $role_name = $staff['role']; // the enum value (e.g. 'doctor', 'nurse')
+    $status = !empty($staff['status']) ? strtolower($staff['status']) : 'active';
     
     $sql = "INSERT INTO staff ";
-    $sql .= "(system_staff_id, full_name, email, password, role, role_id, department, profile_image, password_reset_required) ";
+    $sql .= "(system_staff_id, full_name, email, password, role, role_id, department, profile_image, password_reset_required, status) ";
     $sql .= "VALUES ";
-    $sql .= "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql .= "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     $query = $db_1->prepare($sql);
     
-    $query->bind_param("sssssissi", $system_staff_id, $staff['full_name'], $staff['email'], $hashed_password, $role_name, $role_id, $staff['department'], $staff['profile_image'], $staff['password_reset_required']);
+    $query->bind_param("sssssissis", $system_staff_id, $staff['full_name'], $staff['email'], $hashed_password, $role_name, $role_id, $staff['department'], $staff['profile_image'], $staff['password_reset_required'], $status);
     $query->execute();
     
     $newId = $db_1->insert_id; // THIS is the real ID
@@ -385,12 +386,14 @@ if ($query->affected_rows > 0) {
 function update_staff($staff) {
     global $db_1;
     
-    $password_sent = !is_blank($staff['hashed_password']);
+    $password_sent = !is_blank($staff['hashed_password'] ?? '');
     
     $errors = validate_staff($staff, ['password_required' => $password_sent]);
     if(!empty($errors)) {
         return $errors;
     }
+
+    $status = !empty($staff['status']) ? strtolower($staff['status']) : 'active';
     
     $sql = "UPDATE staff SET ";
     $sql .= "full_name = ?, ";
@@ -400,7 +403,8 @@ function update_staff($staff) {
     }
     $sql .= "role = ?, ";
     $sql .= "department = ?, ";
-    $sql .= "profile_image = ? ";
+    $sql .= "profile_image = ?, ";
+    $sql .= "status = ? ";
     $sql .= "WHERE id = ? ";
     $sql .= "LIMIT 1";
     
@@ -409,9 +413,9 @@ function update_staff($staff) {
     
     if($password_sent) {
         $hashed_password = password_hash($staff['hashed_password'], PASSWORD_BCRYPT);
-        $query->bind_param("ssssssi", $staff['full_name'], $staff['email'], $hashed_password, $staff['role'], $staff['department'], $staff['profile_image'], $staff['id']);
+        $query->bind_param("sssssssi", $staff['full_name'], $staff['email'], $hashed_password, $staff['role'], $staff['department'], $staff['profile_image'], $status, $staff['id']);
     } else {
-        $query->bind_param("sssssi", $staff['full_name'], $staff['email'], $staff['role'], $staff['department'], $staff['profile_image'], $staff['id']);
+        $query->bind_param("ssssssi", $staff['full_name'], $staff['email'], $staff['role'], $staff['department'], $staff['profile_image'], $status, $staff['id']);
     }
     $query->execute();
     
@@ -663,701 +667,199 @@ function generate_patient_id() {
 }
 
 function validate_patient($patient) {
-
     $errors = [];
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Basic Information
-    |--------------------------------------------------------------------------
-    */
-
-    // Surname
+    // Basic Information
     if (is_blank($patient['surname'] ?? '')) {
-
         $errors[] = "Surname cannot be blank.";
-
-    } elseif (!has_length($patient['surname'], [
-        'min' => 2,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "Surname must be between 2 and 255 characters.";
+    } elseif (!has_length($patient['surname'], ['min' => 2, 'max' => 100])) {
+        $errors[] = "Surname must be between 2 and 100 characters.";
     }
 
-
-    // First Name
     if (is_blank($patient['first_name'] ?? '')) {
-
         $errors[] = "First name cannot be blank.";
-
-    } elseif (!has_length($patient['first_name'], [
-        'min' => 2,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "First name must be between 2 and 255 characters.";
+    } elseif (!has_length($patient['first_name'], ['min' => 2, 'max' => 100])) {
+        $errors[] = "First name must be between 2 and 100 characters.";
     }
 
-
-    // Gender
-    if (is_blank($patient['gender'] ?? '')) {
-
+    $genderCheck = $patient['gender'] ?? $patient['sex'] ?? '';
+    if (is_blank($genderCheck)) {
         $errors[] = "Gender cannot be blank.";
     }
 
-
-    // Date of Birth
     if (is_blank($patient['date_of_birth'] ?? '')) {
-
-        $errors[] =
-            "Please select the patient's date of birth.";
+        $errors[] = "Please select the patient's date of birth.";
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Contact Information
-    |--------------------------------------------------------------------------
-    */
-
-    // Phone
+    // Contact Information
     if (is_blank($patient['phone'] ?? '')) {
-
-        $errors[] =
-            "Please add a phone number.";
-
-    } elseif (!has_length($patient['phone'], [
-        'max' => 20
-    ])) {
-
-        $errors[] =
-            "Phone number must have at most 20 characters.";
+        $errors[] = "Please add a primary phone number.";
+    } elseif (!has_length($patient['phone'], ['max' => 25])) {
+        $errors[] = "Phone number must have at most 25 characters.";
     }
 
-
-    // Alternate Phone
-    if (
-        !empty($patient['alternate_phone']) &&
-        !has_length($patient['alternate_phone'], [
-            'max' => 20
-        ])
-    ) {
-
-        $errors[] =
-            "Alternate phone number must have at most 20 characters.";
+    if (!empty($patient['alternate_phone']) && !has_length($patient['alternate_phone'], ['max' => 25])) {
+        $errors[] = "Alternate phone number must have at most 25 characters.";
     }
 
-
-    // Email
-    if (is_blank($patient['email'] ?? '')) {
-
-        $errors[] =
-            "Please fill in an email address.";
-
-    } else {
-
-        if (!has_length($patient['email'], [
-            'max' => 255
-        ])) {
-
-            $errors[] =
-                "Email address must be at most 255 characters.";
+    // Email is optional, validate format only if provided
+    if (!empty($patient['email'])) {
+        if (!has_length($patient['email'], ['max' => 255])) {
+            $errors[] = "Email address must be at most 255 characters.";
         }
-
         if (!has_valid_email_format($patient['email'])) {
-
-            $errors[] =
-                "Email has invalid character(s).";
+            $errors[] = "Email format is invalid.";
         }
     }
 
-
-    // Address
-    if (is_blank($patient['address'] ?? '')) {
-
-        $errors[] =
-            "Please add an address.";
-
-    } elseif (!has_length($patient['address'], [
-        'min' => 3,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "Address field must contain between 3 and 255 characters.";
+    // Address is optional, but if provided validate max length
+    if (!empty($patient['address']) && !has_length($patient['address'], ['max' => 255])) {
+        $errors[] = "Address cannot exceed 255 characters.";
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Patient Category
-    |--------------------------------------------------------------------------
-    */
-
+    // Category
     if (is_blank($patient['patient_category'] ?? '')) {
-
-        $errors[] =
-            "Select the appropriate patient category.";
+        $errors[] = "Select the appropriate patient category.";
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Category-Specific Information
-    |--------------------------------------------------------------------------
-    |
-    | Only fields applicable to the selected patient category
-    | are required.
-    |
-    */
-
-    $patientCategory =
-        trim($patient['patient_category'] ?? '');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Student
-    |--------------------------------------------------------------------------
-    */
+    $patientCategory = trim($patient['patient_category'] ?? '');
 
     if ($patientCategory === 'Student') {
-
-        // Matric Number
         if (is_blank($patient['matric_number'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the student's matriculation number.";
-
-        } elseif (!has_length($patient['matric_number'], [
-            'max' => 50
-        ])) {
-
-            $errors[] =
-                "Matriculation number is too long.";
+            $errors[] = "Please fill in the student's matriculation number.";
         }
-
-
-        // Faculty
-        if (is_blank($patient['faculty'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the student's faculty.";
-
-        } elseif (!has_length($patient['faculty'], [
-            'max' => 255
-        ])) {
-
-            $errors[] =
-                "Faculty must be at most 255 characters.";
-        }
-
-
-        // Department
-        if (is_blank($patient['department'] ?? '')) {
-
-            $errors[] =
-                "Department cannot be blank for a student.";
-
-        } elseif (!has_length($patient['department'], [
-            'min' => 2,
-            'max' => 50
-        ])) {
-
-            $errors[] =
-                "Department must be between 2 and 50 characters.";
-        }
-
-
-        // Level
-        if (is_blank($patient['level'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the student's level.";
-
-        } elseif (!has_length($patient['level'], [
-            'max' => 50
-        ])) {
-
-            $errors[] =
-                "Level is too long.";
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Staff
-    |--------------------------------------------------------------------------
-    */
-
-    elseif ($patientCategory === 'Staff') {
-
-        // Staff Number
+    } elseif ($patientCategory === 'Staff') {
         if (is_blank($patient['staff_number'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the staff number.";
-
-        } elseif (!has_length($patient['staff_number'], [
-            'max' => 50
-        ])) {
-
-            $errors[] =
-                "Staff number is too long.";
+            $errors[] = "Please fill in the staff number/ID.";
         }
-
-
-        // Staff Position
-        if (is_blank($patient['staff_position'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the staff position.";
-
-        } elseif (!has_length($patient['staff_position'], [
-            'max' => 255
-        ])) {
-
-            $errors[] =
-                "Staff position must be at most 255 characters.";
+    } elseif ($patientCategory === 'Dependant') {
+        if (is_blank($patient['relationship_to_principal'] ?? '')) {
+            $errors[] = "Please fill in the dependant's relationship to the principal staff member.";
         }
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Dependant
-    |--------------------------------------------------------------------------
-    */
-
-    elseif ($patientCategory === 'Dependant') {
-
-        // Relationship to Principal
-        if (
-            is_blank(
-                $patient['relationship_to_principal'] ?? ''
-            )
-        ) {
-
-            $errors[] =
-                "Please fill in the dependant's relationship to the principal patient.";
-
-        } elseif (!has_length(
-            $patient['relationship_to_principal'],
-            [
-                'min' => 2,
-                'max' => 255
-            ]
-        )) {
-
-            $errors[] =
-                "The relationship to the principal patient must be between 2 and 255 characters.";
-        }
-
-
-        // Principal Patient ID
-        if (empty($patient['principal_patient_id'])) {
-
-            $errors[] =
-                "Please select the principal patient for this dependant.";
-
-        } elseif (
-            !is_numeric($patient['principal_patient_id']) ||
-            (int)$patient['principal_patient_id'] <= 0
-        ) {
-
-            $errors[] =
-                "The principal patient ID is invalid.";
+    // Principal Patient check if provided
+    $principalPatientId = !empty($patient['principal_patient_id']) ? (int)$patient['principal_patient_id'] : null;
+    if ($principalPatientId !== null && $principalPatientId > 0) {
+        if ($principalPatientId === (int)($patient['id'] ?? 0)) {
+            $errors[] = "A patient cannot be their own principal patient.";
         }
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | External
-    |--------------------------------------------------------------------------
-    */
-
-    elseif ($patientCategory === 'External') {
-
-        // Occupation
-        if (is_blank($patient['occupation'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the patient's occupation.";
-
-        } elseif (!has_length($patient['occupation'], [
-            'max' => 255
-        ])) {
-
-            $errors[] =
-                "Occupation must be at most 255 characters.";
-        }
-
-
-        // Employer
-        if (is_blank($patient['employer'] ?? '')) {
-
-            $errors[] =
-                "Please fill in the patient's employer.";
-
-        } elseif (!has_length($patient['employer'], [
-            'max' => 255
-        ])) {
-
-            $errors[] =
-                "Employer must be at most 255 characters.";
-        }
+    // Emergency Contact
+    $emergencyName = trim($patient['emergency_contact_name'] ?? $patient['emergency_name'] ?? '');
+    $emergencyPhone = trim($patient['emergency_contact_phone'] ?? $patient['emergency_phone'] ?? '');
+    if (!empty($emergencyName) && !has_length($emergencyName, ['min' => 2, 'max' => 150])) {
+        $errors[] = "Emergency contact name must be between 2 and 150 characters.";
+    }
+    if (!empty($emergencyPhone) && !has_length($emergencyPhone, ['max' => 25])) {
+        $errors[] = "Emergency contact phone must have at most 25 characters.";
     }
 
-    /* 
-|--------------------------------------------------------------------------
-| Principal Patient
-|--------------------------------------------------------------------------
-*/
-
-$principalPatientId =
-    !empty($patient['principal_patient_id'])
-    ? (int)$patient['principal_patient_id']
-    : null;
-
-if ($principalPatientId !== null) {
-
-    if ($principalPatientId === (int)($patient['id'] ?? 0)) {
-
-        $errors[] =
-            "A patient cannot be their own principal patient.";
-
-    } else {
-
-        global $db_1;
-
-        $checkSql = "
-            SELECT id
-            FROM patients
-            WHERE id = ?
-            LIMIT 1
-        ";
-
-        $checkStmt =
-            $db_1->prepare($checkSql);
-
-        if ($checkStmt) {
-
-            $checkStmt->bind_param(
-                "i",
-                $principalPatientId
-            );
-
-            $checkStmt->execute();
-
-            $checkResult =
-                $checkStmt->get_result();
-
-            if (!$checkResult->fetch_assoc()) {
-
-                $errors[] =
-                    "The selected principal patient could not be found.";
-
-            }
-
-            $checkStmt->close();
-
-        } else {
-
-            $errors[] =
-                "Unable to verify the selected principal patient.";
-        }
+    // Next of Kin
+    $nextOfKinName = trim($patient['next_of_kin_name'] ?? '');
+    $nextOfKinPhone = trim($patient['next_of_kin_phone'] ?? '');
+    if (!empty($nextOfKinName) && !has_length($nextOfKinName, ['min' => 2, 'max' => 150])) {
+        $errors[] = "Next of kin name must be between 2 and 150 characters.";
     }
-}
-
-    /*
-    |--------------------------------------------------------------------------
-    | Medical Information
-    |--------------------------------------------------------------------------
-    */
-
-    // Blood Group
-    if (is_blank($patient['blood_group'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the patient's blood group.";
-
-    } elseif (!has_length($patient['blood_group'], [
-        'min' => 2,
-        'max' => 5
-    ])) {
-
-        $errors[] =
-            "The blood group must be between 2 and 5 characters.";
+    if (!empty($nextOfKinPhone) && !has_length($nextOfKinPhone, ['max' => 25])) {
+        $errors[] = "Next of kin phone must have at most 25 characters.";
     }
-
-
-    // Genotype
-    if (is_blank($patient['genotype'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the patient's genotype.";
-
-    } elseif (!has_length($patient['genotype'], [
-        'min' => 2,
-        'max' => 5
-    ])) {
-
-        $errors[] =
-            "The genotype field must have between 2 and 5 characters.";
-    }
-
-
-    // Allergies
-    if (is_blank($patient['allergies'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the patient's allergies if any, or put 'None'.";
-
-    } elseif (!has_length($patient['allergies'], [
-        'min' => 2,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "The allergies field must have between 2 and 255 characters.";
-    }
-
-
-    // Chronic Conditions
-    if (is_blank($patient['chronic_conditions'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the patient's chronic conditions if any, or put 'None'.";
-
-    } elseif (!has_length($patient['chronic_conditions'], [
-        'min' => 2,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "The chronic conditions field must have between 2 and 255 characters.";
-    }
-
-
-    // Disabilities
-    if (
-        !empty($patient['disabilities']) &&
-        !has_length($patient['disabilities'], [
-            'max' => 255
-        ])
-    ) {
-
-        $errors[] =
-            "The disabilities field must be at most 255 characters.";
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Emergency Contact
-    |--------------------------------------------------------------------------
-    */
-
-    if (is_blank($patient['emergency_name'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the name of the patient's emergency contact.";
-
-    } elseif (!has_length($patient['emergency_name'], [
-        'min' => 2,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "The emergency contact name must be between 2 and 255 characters.";
-    }
-
-
-    if (is_blank($patient['emergency_phone'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the phone number of the patient's emergency contact.";
-
-    } elseif (!has_length($patient['emergency_phone'], [
-        'max' => 20
-    ])) {
-
-        $errors[] =
-            "The emergency contact phone number must have at most 20 characters.";
-    }
-
-
-    if (is_blank($patient['emergency_relationship'] ?? '')) {
-
-        $errors[] =
-            "Please fill in the relationship of the patient with the emergency contact.";
-
-    } elseif (!has_length($patient['emergency_relationship'], [
-        'min' => 2,
-        'max' => 255
-    ])) {
-
-        $errors[] =
-            "The emergency contact relationship must be between 2 and 255 characters.";
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Patient Status
-    |--------------------------------------------------------------------------
-    */
-
-    if (is_blank($patient['status'] ?? '')) {
-
-        $errors[] =
-            "Select the patient's current status.";
-    }
-
 
     return $errors;
 }
 
-function search_patients_for_principal($search, $currentPatientId) {
-
+function search_patients_for_principal($search, $currentPatientId = 0) {
     global $db_1;
 
+    $search = trim($search);
+    $currentPatientId = (int)$currentPatientId;
 
-    $search =
-        trim($search);
-
-    $currentPatientId =
-        (int)$currentPatientId;
-
-
-    if (
-        $search === '' ||
-        $currentPatientId <= 0
-    ) {
-
+    if ($search === '') {
         return [];
-
     }
 
+    $searchTerm = '%' . $search . '%';
 
-    $sql = "
-        SELECT
-            id,
-            patient_id,
-            surname,
-            first_name,
-            middle_name,
-            patient_category
-
-        FROM patients
-
-        WHERE id != ?
-
-        AND (
-            surname LIKE ?
-            OR first_name LIKE ?
-            OR middle_name LIKE ?
-        )
-
-        ORDER BY
-            surname ASC,
-            first_name ASC
-
-        LIMIT 10
-    ";
-
-
-    $stmt =
-        $db_1->prepare($sql);
-
-
-    if (!$stmt) {
-
-        error_log(
-            'search_patients_for_principal prepare failed: ' .
-            $db_1->error
-        );
-
-        return [];
-
+    if ($currentPatientId > 0) {
+        $sql = "
+            SELECT
+                id,
+                patient_id,
+                surname,
+                first_name,
+                middle_name,
+                staff_number,
+                department,
+                profile_image,
+                patient_category
+            FROM patients
+            WHERE patient_category = 'Staff'
+            AND id != ?
+            AND (
+                surname LIKE ?
+                OR first_name LIKE ?
+                OR middle_name LIKE ?
+                OR staff_number LIKE ?
+                OR patient_id LIKE ?
+            )
+            ORDER BY surname ASC, first_name ASC
+            LIMIT 10
+        ";
+        $stmt = $db_1->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('isssss', $currentPatientId, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+    } else {
+        $sql = "
+            SELECT
+                id,
+                patient_id,
+                surname,
+                first_name,
+                middle_name,
+                staff_number,
+                department,
+                profile_image,
+                patient_category
+            FROM patients
+            WHERE patient_category = 'Staff'
+            AND (
+                surname LIKE ?
+                OR first_name LIKE ?
+                OR middle_name LIKE ?
+                OR staff_number LIKE ?
+                OR patient_id LIKE ?
+            )
+            ORDER BY surname ASC, first_name ASC
+            LIMIT 10
+        ";
+        $stmt = $db_1->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('sssss', $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
     }
-
-
-    $searchTerm =
-        '%' . $search . '%';
-
-
-    $stmt->bind_param(
-        'isss',
-        $currentPatientId,
-        $searchTerm,
-        $searchTerm,
-        $searchTerm
-    );
-
 
     if (!$stmt->execute()) {
-
-        error_log(
-            'search_patients_for_principal execute failed: ' .
-            $stmt->error
-        );
-
         $stmt->close();
-
         return [];
-
     }
 
-
-    $result =
-        $stmt->get_result();
-
-
+    $result = $stmt->get_result();
     $patients = [];
-
-
-    while (
-        $row =
-            $result->fetch_assoc()
-    ) {
-
+    while ($row = $result->fetch_assoc()) {
         $patients[] = [
-
-            'id' =>
-                (int)$row['id'],
-
-            'patient_id' =>
-                $row['patient_id'],
-
-            'surname' =>
-                $row['surname'],
-
-            'first_name' =>
-                $row['first_name'],
-
-            'middle_name' =>
-                $row['middle_name'],
-
-            'patient_category' =>
-                $row['patient_category']
-
+            'id' => (int)$row['id'],
+            'patient_id' => $row['patient_id'],
+            'surname' => $row['surname'],
+            'first_name' => $row['first_name'],
+            'middle_name' => $row['middle_name'],
+            'staff_number' => $row['staff_number'] ?? '',
+            'department' => $row['department'] ?? '',
+            'profile_image' => $row['profile_image'] ?? '',
+            'patient_category' => $row['patient_category']
         ];
-
     }
-
-
     $stmt->close();
-
-
     return $patients;
-
 }
 
 function find_patient_by_patient_id($patientId) {
@@ -1490,71 +992,219 @@ function search_patients_by_name($search)
 function insert_patient($patient) {
     global $db_1;
     
+    if (empty($patient['status'])) {
+        $patient['status'] = 'Active';
+    }
+    
     $errors = validate_patient($patient);
-    if(!empty($errors)) {
+    if (!empty($errors)) {
         return $errors;
     }
     
     $system_patient_id = generate_patient_id();
     
+    $surname = trim($patient['surname'] ?? '');
+    $firstName = trim($patient['first_name'] ?? '');
+    $middleName = trim($patient['middle_name'] ?? '');
+    $gender = $patient['gender'] ?? $patient['sex'] ?? 'Male';
+    $nationality = trim($patient['nationality'] ?? $patient['country'] ?? 'Nigeria');
+    $stateOfOrigin = trim($patient['state_of_origin'] ?? $patient['state'] ?? '');
+    $lga = trim($patient['lga'] ?? '');
+    $maritalStatus = trim($patient['marital_status'] ?? '');
+    $dob = !empty($patient['date_of_birth']) ? $patient['date_of_birth'] : null;
     
-    $sql = "INSERT INTO patients ";
-    $sql .= "(patient_id, surname, first_name, middle_name, sex, date_of_birth, phone, email, address, patient_category, matric_number, staff_number, faculty, department, level, position, blood_group, genotype, allergies, chronic_conditions, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, profile_image, status) ";
-    $sql .= "VALUES ";
-    $sql .= "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $phone = trim($patient['phone'] ?? '');
+    $altPhone = trim($patient['alternate_phone'] ?? '');
+    $email = trim($patient['email'] ?? '');
+    $address = trim($patient['address'] ?? '');
+    $city = trim($patient['city'] ?? '');
+    $residentialState = trim($patient['residential_state'] ?? '');
+    $postalCode = trim($patient['postal_code'] ?? '');
+    $state = $stateOfOrigin;
+    
+    $category = $patient['patient_category'] ?? 'Student';
+    $matricNo = trim($patient['matric_number'] ?? '');
+    $staffNo = trim($patient['staff_number'] ?? '');
+    $faculty = trim($patient['faculty'] ?? '');
+    $department = trim($patient['department'] ?? '');
+    $level = trim($patient['level'] ?? '');
+    $staffPosition = trim($patient['staff_position'] ?? $patient['position'] ?? '');
+    
+    $bloodGroup = trim($patient['blood_group'] ?? '');
+    $genotype = trim($patient['genotype'] ?? '');
+    $allergies = trim($patient['allergies'] ?? '');
+    $chronicConditions = trim($patient['chronic_conditions'] ?? '');
+    $disabilities = trim($patient['disabilities'] ?? '');
+    
+    $nextOfKinName = trim($patient['next_of_kin_name'] ?? '');
+    $nextOfKinPhone = trim($patient['next_of_kin_phone'] ?? '');
+    $nextOfKinRel = trim($patient['next_of_kin_relationship'] ?? '');
+    
+    $emergencyName = trim($patient['emergency_contact_name'] ?? $patient['emergency_name'] ?? '');
+    $emergencyPhone = trim($patient['emergency_contact_phone'] ?? $patient['emergency_phone'] ?? '');
+    $emergencyRel = trim($patient['emergency_contact_relationship'] ?? $patient['emergency_relationship'] ?? '');
+    
+    if (empty($nextOfKinName) && !empty($emergencyName)) {
+        $nextOfKinName = $emergencyName;
+        $nextOfKinPhone = $emergencyPhone;
+        $nextOfKinRel = $emergencyRel;
+    }
+    
+    $occupation = trim($patient['occupation'] ?? '');
+    $employer = trim($patient['employer'] ?? '');
+    $relPrincipal = trim($patient['relationship_to_principal'] ?? '');
+    $principalId = !empty($patient['principal_patient_id']) ? (int)$patient['principal_patient_id'] : null;
+    
+    $profileImage = $patient['profile_image'] ?? null;
+    $status = $patient['status'] ?? 'Active';
+    $registrationSource = $patient['registration_source'] ?? 'Manual';
+    $registeredBy = $_SESSION['staff_id'] ?? null;
+    
+    $sql = "INSERT INTO patients (
+        patient_id, surname, first_name, middle_name, gender, nationality, state_of_origin, lga, marital_status, date_of_birth,
+        phone, alternate_phone, email, address, city, residential_state, postal_code, state,
+        patient_category, matric_number, staff_number, faculty, department, level, staff_position,
+        blood_group, genotype, allergies, chronic_conditions, disabilities,
+        next_of_kin_name, next_of_kin_phone, next_of_kin_relationship,
+        occupation, employer, relationship_to_principal, principal_patient_id,
+        profile_image, status, registration_source, registered_by
+    ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?
+    )";
     
     $query = $db_1->prepare($sql);
+    if (!$query) {
+        error_log("insert_patient prepare failed: " . $db_1->error);
+        return ["Unable to prepare patient registration."];
+    }
     
-    $query->bind_param("ssssssisssssssissssssisss", $system_patient_id, $patient['surname'], $patient['first_name'], $patient['middle_name'], $patient['sex'], $patient['date_of_birth'], $patient['phone'], $patient['email'], $patient['address'], $patient['patient_category'], $patient['matric_number'], $patient['staff_number'], $patient['faculty'], $patient['department'], $patient['level'], $patient['position'], $patient['blood_group'], $patient['genotype'], $patient['allergies'], $patient['chronic_conditions'], $patient['emergency_contact_name'], $patient['emergency_contact_phone'], $patient['emergency_contact_relationship'], $patient['profile_image'], $patient['status']);
-    $query->execute();
+    $types = str_repeat("s", 41);
+    $query->bind_param(
+        $types,
+        $system_patient_id, $surname, $firstName, $middleName, $gender, $nationality, $stateOfOrigin, $lga, $maritalStatus, $dob,
+        $phone, $altPhone, $email, $address, $city, $residentialState, $postalCode, $state,
+        $category, $matricNo, $staffNo, $faculty, $department, $level, $staffPosition,
+        $bloodGroup, $genotype, $allergies, $chronicConditions, $disabilities,
+        $nextOfKinName, $nextOfKinPhone, $nextOfKinRel,
+        $occupation, $employer, $relPrincipal, $principalId,
+        $profileImage, $status, $registrationSource, $registeredBy
+    );
     
-    $newId = $db_1->insert_id; // THIS is the real ID
-
-if ($query->affected_rows > 0) {
-    $actorId = $_SESSION['staff_id'] ?? $newId; // fallback
-    logAction($actorId, 'CREATED', 'patient', $newId);
-}
+    if (!$query->execute()) {
+        error_log("insert_patient execute failed: " . $query->error);
+        $err = $query->error;
+        $query->close();
+        return ["Failed to insert patient: " . $err];
+    }
     
+    $newId = $db_1->insert_id;
     $query->close();
     
+    // Save emergency contact into patient_emergency_contacts table
+    if (!empty($emergencyName) && !empty($emergencyPhone)) {
+        $emSql = "INSERT INTO patient_emergency_contacts (patient_id, contact_name, relationship, phone, is_primary) VALUES (?, ?, ?, ?, 1)";
+        $emQuery = $db_1->prepare($emSql);
+        if ($emQuery) {
+            $emQuery->bind_param("isss", $newId, $emergencyName, $emergencyRel, $emergencyPhone);
+            $emQuery->execute();
+            $emQuery->close();
+        }
+    }
+    
+    $actorId = $_SESSION['staff_id'] ?? null;
+    if ($actorId !== null) {
+        logAction($actorId, 'CREATED', 'patient', $newId);
+    }
+    
     return [
-    'success' => true,
-    'id' => $newId
-];
+        'success' => true,
+        'id' => $newId
+    ];
 }
-
 
 function update_patient($patient) {
     global $db_1;
 
+    $patientDatabaseId = (int)($patient['id'] ?? 0);
+    if ($patientDatabaseId <= 0) {
+        return ["Invalid patient ID for update."];
+    }
+    
+    $existing = find_patient_by_id($patientDatabaseId);
+    if (!$existing) {
+        return ["Patient record not found."];
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validate patient data
-    |--------------------------------------------------------------------------
-    */
+    if (empty($patient['status'])) {
+        $patient['status'] = $existing['status'] ?? 'Active';
+    }
 
     $errors = validate_patient($patient);
-
     if (!empty($errors)) {
         return $errors;
     }
 
+    $surname = trim($patient['surname'] ?? '');
+    $firstName = trim($patient['first_name'] ?? '');
+    $middleName = trim($patient['middle_name'] ?? '');
+    $gender = $patient['gender'] ?? $patient['sex'] ?? 'Male';
+    $nationality = trim($patient['nationality'] ?? $patient['country'] ?? 'Nigeria');
+    $stateOfOrigin = trim($patient['state_of_origin'] ?? $patient['state'] ?? '');
+    $lga = trim($patient['lga'] ?? '');
+    $maritalStatus = trim($patient['marital_status'] ?? '');
+    $dob = !empty($patient['date_of_birth']) ? $patient['date_of_birth'] : null;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Prepare Patient Update
-    |--------------------------------------------------------------------------
-    |
-    | patient_id is NOT changed.
-    | registration_source is NOT changed.
-    | registered_by is NOT changed.
-    |
-    */
+    $phone = trim($patient['phone'] ?? '');
+    $altPhone = trim($patient['alternate_phone'] ?? '');
+    $email = trim($patient['email'] ?? '');
+    $address = trim($patient['address'] ?? '');
+    $city = trim($patient['city'] ?? '');
+    $residentialState = trim($patient['residential_state'] ?? '');
+    $postalCode = trim($patient['postal_code'] ?? '');
+    $state = $stateOfOrigin;
+
+    $category = $patient['patient_category'] ?? 'Student';
+    $matricNo = trim($patient['matric_number'] ?? '');
+    $staffNo = trim($patient['staff_number'] ?? '');
+    $faculty = trim($patient['faculty'] ?? '');
+    $department = trim($patient['department'] ?? '');
+    $level = trim($patient['level'] ?? '');
+    $staffPosition = trim($patient['staff_position'] ?? $patient['position'] ?? '');
+
+    $bloodGroup = trim($patient['blood_group'] ?? '');
+    $genotype = trim($patient['genotype'] ?? '');
+    $allergies = trim($patient['allergies'] ?? '');
+    $chronicConditions = trim($patient['chronic_conditions'] ?? '');
+    $disabilities = trim($patient['disabilities'] ?? '');
+
+    $nextOfKinName = trim($patient['next_of_kin_name'] ?? '');
+    $nextOfKinPhone = trim($patient['next_of_kin_phone'] ?? '');
+    $nextOfKinRel = trim($patient['next_of_kin_relationship'] ?? '');
+
+    $emergencyName = trim($patient['emergency_contact_name'] ?? $patient['emergency_name'] ?? '');
+    $emergencyPhone = trim($patient['emergency_contact_phone'] ?? $patient['emergency_phone'] ?? '');
+    $emergencyRel = trim($patient['emergency_contact_relationship'] ?? $patient['emergency_relationship'] ?? '');
+
+    if (empty($nextOfKinName) && !empty($emergencyName)) {
+        $nextOfKinName = $emergencyName;
+        $nextOfKinPhone = $emergencyPhone;
+        $nextOfKinRel = $emergencyRel;
+    }
+
+    $occupation = trim($patient['occupation'] ?? '');
+    $employer = trim($patient['employer'] ?? '');
+    $relPrincipal = trim($patient['relationship_to_principal'] ?? '');
+    $principalId = !empty($patient['principal_patient_id']) ? (int)$patient['principal_patient_id'] : null;
+    $status = $patient['status'] ?? 'Active';
 
     $sql = "
         UPDATE patients SET
-
             surname = ?,
             first_name = ?,
             middle_name = ?,
@@ -1564,7 +1214,6 @@ function update_patient($patient) {
             lga = ?,
             marital_status = ?,
             date_of_birth = ?,
-
             phone = ?,
             alternate_phone = ?,
             email = ?,
@@ -1573,7 +1222,6 @@ function update_patient($patient) {
             residential_state = ?,
             postal_code = ?,
             state = ?,
-
             patient_category = ?,
             matric_number = ?,
             staff_number = ?,
@@ -1581,195 +1229,32 @@ function update_patient($patient) {
             department = ?,
             level = ?,
             staff_position = ?,
-
             blood_group = ?,
             genotype = ?,
             allergies = ?,
             chronic_conditions = ?,
             disabilities = ?,
-
+            next_of_kin_name = ?,
+            next_of_kin_phone = ?,
+            next_of_kin_relationship = ?,
             status = ?,
             occupation = ?,
             employer = ?,
             relationship_to_principal = ?,
             principal_patient_id = ?
-
         WHERE id = ?
         LIMIT 1
     ";
 
-
     $query = $db_1->prepare($sql);
+    if (!$query) {
+        error_log('update_patient prepare failed: ' . $db_1->error);
+        return ["Unable to prepare patient update."];
+    }
 
-if (!$query) {
-
-    error_log(
-        'update_patient prepare failed: ' .
-        $db_1->error
-    );
-
-    return [
-        "Unable to prepare patient update."
-    ];
-
-}
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Basic Information
-    |--------------------------------------------------------------------------
-    */
-
-    $surname =
-        trim($patient['surname'] ?? '');
-
-    $firstName =
-        trim($patient['first_name'] ?? '');
-
-    $middleName =
-        trim($patient['middle_name'] ?? '');
-
-    $gender =
-        $patient['gender'] ?? null;
-
-    $nationality =
-        $patient['nationality'] ?? null;
-
-    $stateOfOrigin =
-        $patient['state_of_origin'] ?? null;
-
-    $lga =
-        $patient['lga'] ?? null;
-
-    $maritalStatus =
-        $patient['marital_status'] ?? null;
-
-    $dateOfBirth =
-        $patient['date_of_birth'] ?? null;
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Contact Information
-    |--------------------------------------------------------------------------
-    */
-
-    $phone =
-        trim($patient['phone'] ?? '');
-
-    $alternatePhone =
-        trim($patient['alternate_phone'] ?? '');
-
-    $email =
-        trim($patient['email'] ?? '');
-
-    $address =
-        trim($patient['address'] ?? '');
-
-    $city =
-        trim($patient['city'] ?? '');
-
-    $residentialState =
-        trim($patient['residential_state'] ?? '');
-
-    $postalCode =
-        trim($patient['postal_code'] ?? '');
-
-    $state =
-        trim($patient['state'] ?? '');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | University / Employment Information
-    |--------------------------------------------------------------------------
-    */
-
-    $patientCategory =
-        $patient['patient_category'] ?? null;
-
-    $matricNumber =
-        trim($patient['matric_number'] ?? '');
-
-    $staffNumber =
-        trim($patient['staff_number'] ?? '');
-
-    $faculty =
-        trim($patient['faculty'] ?? '');
-
-    $department =
-        trim($patient['department'] ?? '');
-
-    $level =
-        trim($patient['level'] ?? '');
-
-    $staffPosition =
-        trim($patient['staff_position'] ?? '');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Medical Information
-    |--------------------------------------------------------------------------
-    */
-
-    $bloodGroup =
-        trim($patient['blood_group'] ?? '');
-
-    $genotype =
-        trim($patient['genotype'] ?? '');
-
-    $allergies =
-        trim($patient['allergies'] ?? '');
-
-    $chronicConditions =
-        trim($patient['chronic_conditions'] ?? '');
-
-    $disabilities =
-        trim($patient['disabilities'] ?? '');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Other Information
-    |--------------------------------------------------------------------------
-    */
-
-    $status =
-        $patient['status'] ?? 'Active';
-
-    $occupation =
-        trim($patient['occupation'] ?? '');
-
-    $employer =
-        trim($patient['employer'] ?? '');
-
-    $relationshipToPrincipal =
-        trim($patient['relationship_to_principal'] ?? '');
-
-    $principalPatientId =
-        !empty($patient['principal_patient_id'])
-        ? (int)$patient['principal_patient_id']
-        : null;
-
-    $patientDatabaseId =
-        (int)$patient['id'];
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Bind Parameters
-    |--------------------------------------------------------------------------
-    |
-    | 33 string values
-    | 2 integer values
-    |
-    */
-
+    $types = str_repeat("s", 37) . "i";
     $query->bind_param(
-        "sssssssssssssssssssssssssssssssssii",
-
+        $types,
         $surname,
         $firstName,
         $middleName,
@@ -1778,294 +1263,81 @@ if (!$query) {
         $stateOfOrigin,
         $lga,
         $maritalStatus,
-        $dateOfBirth,
-
+        $dob,
         $phone,
-        $alternatePhone,
+        $altPhone,
         $email,
         $address,
         $city,
         $residentialState,
         $postalCode,
         $state,
-
-        $patientCategory,
-        $matricNumber,
-        $staffNumber,
+        $category,
+        $matricNo,
+        $staffNo,
         $faculty,
         $department,
         $level,
         $staffPosition,
-
         $bloodGroup,
         $genotype,
         $allergies,
         $chronicConditions,
         $disabilities,
-
+        $nextOfKinName,
+        $nextOfKinPhone,
+        $nextOfKinRel,
         $status,
         $occupation,
         $employer,
-        $relationshipToPrincipal,
-
-        $principalPatientId,
+        $relPrincipal,
+        $principalId,
         $patientDatabaseId
     );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Execute Update
-    |--------------------------------------------------------------------------
-    */
-
-   if (!$query->execute()) {
-
-    error_log(
-        'update_patient execute failed: ' .
-        $query->error
-    );
-
+    if (!$query->execute()) {
+        error_log('update_patient execute failed: ' . $query->error);
+        $err = $query->error;
+        $query->close();
+        return ["Unable to update patient information: " . $err];
+    }
     $query->close();
 
-    return [
-        "Unable to update patient information."
-    ];
+    // Emergency Contact
+    if (!empty($emergencyName) || !empty($emergencyPhone)) {
+        $checkSql = "SELECT id FROM patient_emergency_contacts WHERE patient_id = ? AND is_primary = 1 LIMIT 1";
+        $checkStmt = $db_1->prepare($checkSql);
+        if ($checkStmt) {
+            $checkStmt->bind_param("i", $patientDatabaseId);
+            $checkStmt->execute();
+            $checkResult = $checkStmt->get_result();
+            $existingEmergency = $checkResult->fetch_assoc();
+            $checkStmt->close();
 
-}
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Audit Log
-    |--------------------------------------------------------------------------
-    */
-
-    if ($query->affected_rows > 0) {
-
-        $actorId =
-            $_SESSION['staff_id'] ?? null;
-
-        if ($actorId !== null) {
-
-            logAction(
-                $actorId,
-                'UPDATED',
-                'patient',
-                $patientDatabaseId
-            );
+            if ($existingEmergency) {
+                $emUpdateSql = "UPDATE patient_emergency_contacts SET contact_name = ?, phone = ?, relationship = ? WHERE id = ?";
+                $emUpdateStmt = $db_1->prepare($emUpdateSql);
+                if ($emUpdateStmt) {
+                    $emUpdateStmt->bind_param("sssi", $emergencyName, $emergencyPhone, $emergencyRel, $existingEmergency['id']);
+                    $emUpdateStmt->execute();
+                    $emUpdateStmt->close();
+                }
+            } else {
+                $emInsertSql = "INSERT INTO patient_emergency_contacts (patient_id, contact_name, relationship, phone, is_primary) VALUES (?, ?, ?, ?, 1)";
+                $emInsertStmt = $db_1->prepare($emInsertSql);
+                if ($emInsertStmt) {
+                    $emInsertStmt->bind_param("isss", $patientDatabaseId, $emergencyName, $emergencyRel, $emergencyPhone);
+                    $emInsertStmt->execute();
+                    $emInsertStmt->close();
+                }
+            }
         }
     }
 
-    $query->close();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Emergency Contact
-    |--------------------------------------------------------------------------
-    |
-    | Emergency contact information is stored separately.
-    |
-    */
-
-    $emergencyName =
-        trim($patient['emergency_name'] ?? '');
-
-    $emergencyPhone =
-        trim($patient['emergency_phone'] ?? '');
-
-    $emergencyRelationship =
-        trim($patient['emergency_relationship'] ?? '');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Find Existing Primary Emergency Contact
-    |--------------------------------------------------------------------------
-    */
-
-    $checkSql = "
-        SELECT id
-        FROM patient_emergency_contacts
-        WHERE patient_id = ?
-        AND is_primary = 1
-        LIMIT 1
-    ";
-
-    $checkStmt =
-        $db_1->prepare($checkSql);
-
-
-    if (!$checkStmt) {
-
-        error_log(
-            'Emergency contact lookup failed: ' .
-            $db_1->error
-        );
-
-        return ["Unable to verify the patient's emergency contact information."];
+    $actorId = $_SESSION['staff_id'] ?? null;
+    if ($actorId !== null) {
+        logAction($actorId, 'UPDATED', 'patient', $patientDatabaseId);
     }
-
-
-    $checkStmt->bind_param(
-        "i",
-        $patientDatabaseId
-    );
-
-    $checkStmt->execute();
-
-    $checkResult =
-        $checkStmt->get_result();
-
-    $existingEmergency =
-        $checkResult->fetch_assoc();
-
-    $checkStmt->close();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Update Existing Emergency Contact
-    |--------------------------------------------------------------------------
-    */
-
-    if ($existingEmergency) {
-
-        $emergencyId =
-            (int)$existingEmergency['id'];
-
-
-        $emergencySql = "
-            UPDATE patient_emergency_contacts
-            SET
-                contact_name = ?,
-                relationship = ?,
-                phone = ?
-            WHERE id = ?
-            LIMIT 1
-        ";
-
-
-        $emergencyStmt =
-            $db_1->prepare($emergencySql);
-
-
-        if (!$emergencyStmt) {
-
-    error_log(
-        'Emergency contact update prepare failed: ' . $db_1->error
-    );
-
-    return [
-        "Unable to update the patient's emergency contact information."
-    ];
-}
-
-
-$emergencyStmt->bind_param(
-    "sssi",
-    $emergencyName,
-    $emergencyRelationship,
-    $emergencyPhone,
-    $emergencyId
-);
-
-
-if (!$emergencyStmt->execute()) {
-
-    error_log(
-        'Emergency contact update failed: ' .
-        $emergencyStmt->error
-    );
-
-    $emergencyStmt->close();
-
-    return [
-        "Unable to update the patient's emergency contact information."
-    ];
-}
-
-
-$emergencyStmt->close();
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Create Emergency Contact If None Exists
-    |--------------------------------------------------------------------------
-    */
-
-    else {
-
-        if (
-            $emergencyName !== '' ||
-            $emergencyPhone !== '' ||
-            $emergencyRelationship !== ''
-        ) {
-
-            $isPrimary = 1;
-
-
-            $emergencySql = "
-                INSERT INTO patient_emergency_contacts (
-                    patient_id,
-                    contact_name,
-                    relationship,
-                    phone,
-                    is_primary
-                )
-                VALUES (?, ?, ?, ?, ?)
-            ";
-
-
-            $emergencyStmt =
-                $db_1->prepare($emergencySql);
-
-
-            if (!$emergencyStmt) {
-
-    error_log(
-        'Emergency contact insert prepare failed: ' .
-        $db_1->error
-    );
-
-    return [
-        "Unable to create the patient's emergency contact."
-    ];
-}
-
-
-$emergencyStmt->bind_param(
-    "isssi",
-    $patientDatabaseId,
-    $emergencyName,
-    $emergencyRelationship,
-    $emergencyPhone,
-    $isPrimary
-);
-
-
-if (!$emergencyStmt->execute()) {
-
-    error_log(
-        'Emergency contact insert failed: ' .
-        $emergencyStmt->error
-    );
-
-    $emergencyStmt->close();
-
-    return [
-        "Unable to create the patient's emergency contact."
-    ];
-}
-
-
-$emergencyStmt->close();
-        }
-    }
-
 
     return true;
 }

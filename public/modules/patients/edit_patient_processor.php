@@ -2,7 +2,8 @@
 require_once('../../../private/config.php');
 require_password_reset();
 
-if (!hasPermission('edit_patient')) {
+$allowedRoles = ['receptionist', 'admin', 'super_admin'];
+if (!in_array($_SESSION['staff_role'] ?? '', $allowedRoles) && !hasPermission('edit_patient')) {
     $_SESSION['error'] = "Access Denied: You do not have permission to edit patients.";
     redirect_to(url_wrap('/modules/patients/index.php'));
 }
@@ -38,11 +39,14 @@ if (is_post_request()) {
 
     $result = update_patient($patient);
     if ($result === true) {
-        update_patient_profile_image($id, $patient['profile_image']);
+        if (!empty($patient['profile_image'])) {
+            update_patient_profile_image($id, $patient['profile_image']);
+        }
         $_SESSION['message'] = "Patient updated successfully!";
         redirect_to(url_wrap('/modules/patients/index.php'));
     } else {
-        $_SESSION['error'] = "Failed to update patient.";
+        $msg = is_array($result) ? implode(" ", $result) : "Failed to update patient.";
+        $_SESSION['error'] = $msg;
         redirect_to(url_wrap('/modules/patients/index.php'));
     }
 } else {
