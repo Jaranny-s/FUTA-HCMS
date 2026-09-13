@@ -72,11 +72,33 @@ if (is_post_request()) {
         save_diagnosis($encounter_id, $staff_id, $_POST['diagnosis_type'], $_POST['diagnosis'], $_POST['icd_code'], $_POST['notes']);
         $_SESSION['message'] = "Diagnosis added.";
     } elseif ($action === 'save_prescription') {
-        save_prescription($encounter_id, $staff_id, (int)$_POST['inventory_id'], $_POST['dosage'], $_POST['frequency'], $_POST['duration'], $_POST['instructions']);
-        $_SESSION['message'] = "Prescription added.";
+        $inv_val = $_POST['inventory_id'] ?? '';
+        $inv_id = ($inv_val !== 'custom' && !empty($inv_val)) ? (int)$inv_val : null;
+        $custom_name = $_POST['custom_medication_name'] ?? '';
+        save_prescription($encounter_id, $staff_id, $inv_id, $_POST['dosage'], $_POST['frequency'], $_POST['duration'], $_POST['instructions'], $custom_name);
+        $_SESSION['message'] = "Prescription added successfully.";
     } elseif ($action === 'complete_encounter') {
-        update_encounter_status($encounter_id, 'Completed');
-        $_SESSION['message'] = "Encounter marked as Completed.";
+        // Enforce clinical prerequisites before marking completed
+        $check_vitals = get_vitals($encounter_id);
+        $check_nursing = get_nursing_notes($encounter_id);
+        $check_consult = get_consultation($encounter_id);
+        $check_diag = get_diagnoses($encounter_id);
+
+        $ok_vn = !empty($check_vitals) || ($check_nursing && $check_nursing->num_rows > 0);
+        $ok_c = !empty($check_consult) && (
+            !empty(trim($check_consult['history_of_present_illness'] ?? '')) || 
+            !empty(trim($check_consult['physical_examination'] ?? '')) || 
+            !empty(trim($check_consult['assessment'] ?? '')) || 
+            !empty(trim($check_consult['management_plan'] ?? ''))
+        );
+        $ok_d = ($check_diag && $check_diag->num_rows > 0);
+
+        if (!$ok_vn || !$ok_c || !$ok_d) {
+            $_SESSION['error'] = "Cannot complete encounter yet: Vitals/Nursing notes, Consultation, and Diagnosis must all be recorded first.";
+        } else {
+            update_encounter_status($encounter_id, 'Completed');
+            $_SESSION['message'] = "Encounter marked as Completed successfully.";
+        }
     }
     
     // Redirect to prevent form resubmission
@@ -89,6 +111,24 @@ $consultation = get_consultation($encounter_id);
 $diagnoses = get_diagnoses($encounter_id);
 $prescriptions = get_prescriptions($encounter_id);
 $inventory_items = get_all_inventory(); // Fetch inventory for prescription form
+
+// Encounter completion prerequisites check
+$has_vitals = !empty($vitals);
+$has_nursing = ($nursing_notes && $nursing_notes->num_rows > 0);
+$has_vitals_nursing = $has_vitals || $has_nursing;
+
+$has_consultation = !empty($consultation) && (
+    !empty(trim($consultation['history_of_present_illness'] ?? '')) || 
+    !empty(trim($consultation['physical_examination'] ?? '')) || 
+    !empty(trim($consultation['assessment'] ?? '')) || 
+    !empty(trim($consultation['management_plan'] ?? ''))
+);
+
+$has_diagnosis = ($diagnoses && $diagnoses->num_rows > 0);
+
+// Prescriptions are optional; required: vitals & nursing, consultation, diagnosis
+$can_complete_encounter = $has_vitals_nursing && $has_consultation && $has_diagnosis;
+$can_prescribe = (hasPermission('prescribe_medication') || in_array($current_role, ['doctor', 'super_admin'])) && $can_write_clinical;
 
 $page_title = 'Encounter Workspace - ' . $encounter['encounter_number'];
 $specificCss = '/assets/css/encounters.css';
@@ -139,17 +179,40 @@ include(SHARED_PATH . '/header.php');
                     </p>
                 </div>
             </div>
-            <div class="encounter-status">
-                <span class="badge status-<?php echo str_replace(' ', '-', strtolower($encounter['status'])); ?>">
-                    Status: <?php echo v_wrap($encounter['status']); ?>
-                </span>
-                <?php if ($encounter['status'] !== 'Completed' && hasPermission('edit_encounter') && $can_write_clinical) { ?>
-                <form action="<?php echo url_wrap("/modules/encounters/view.php?id={$encounter_id}"); ?>" method="post" style="display:inline-block; margin-top: 10px;">
-                    <input type="hidden" name="action" value="complete_encounter">
-                    <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
-                        <i class="bi bi-check-circle"></i> Complete Encounter
+            <div class="encounter-status" style="display: flex; flex-direction: column; align-items: flex-end;">
+                <div>
+                    <span class="badge status-<?php echo str_replace(' ', '-', strtolower($encounter['status'])); ?>">
+                        Status: <?php echo v_wrap($encounter['status']); ?>
+                    </span>
+                </div>
+                <?php if ($encounter['status'] !== 'Completed' && $can_write_clinical) { ?>
+                <div style="margin-top: 10px; text-align: right;">
+                    <?php if ($can_complete_encounter) { ?>
+                    <form action="<?php echo url_wrap("/modules/encounters/view.php?id={$encounter_id}"); ?>" method="post" style="display:inline-block;">
+                        <input type="hidden" name="action" value="complete_encounter">
+                        <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:9px 18px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.92rem; box-shadow:0 3px 6px rgba(27,192,61,0.25);">
+                            <i class="bi bi-check-circle-fill"></i> Complete Encounter
+                        </button>
+                    </form>
+                    <?php } else { ?>
+                    <button type="button" class="btn" disabled style="background:#f1f3f5; color:#868e96; border:1px solid #ced4da; padding:8px 16px; border-radius:6px; cursor:not-allowed; font-size:0.9rem; font-weight:500;" title="Complete all clinical prerequisites to enable">
+                        <i class="bi bi-lock-fill"></i> Complete Encounter
                     </button>
-                </form>
+                    <div style="font-size: 0.78rem; margin-top: 6px; color: #555; text-align: right;">
+                        <span style="font-weight:600; color:#444;">Required to complete:</span><br>
+                        <span style="color: <?php echo $has_vitals_nursing ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
+                            <i class="bi <?php echo $has_vitals_nursing ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Vitals & Nursing
+                        </span> &bull; 
+                        <span style="color: <?php echo $has_consultation ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
+                            <i class="bi <?php echo $has_consultation ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Consultation
+                        </span> &bull; 
+                        <span style="color: <?php echo $has_diagnosis ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
+                            <i class="bi <?php echo $has_diagnosis ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Diagnosis
+                        </span>
+                        <div style="font-size:0.72rem; color:#888; margin-top:2px;">(Prescription is optional)</div>
+                    </div>
+                    <?php } ?>
+                </div>
                 <?php } ?>
             </div>
         </div>
@@ -385,8 +448,8 @@ include(SHARED_PATH . '/header.php');
                     <?php } ?>
                 </table>
 
-                <?php if (hasPermission('add_prescription') && $can_write_clinical) { ?>
-                <button data-modal-target="addPrescriptionModal" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px;">+ Write Prescription</button>
+                <?php if ($can_prescribe) { ?>
+                <button data-modal-target="addPrescriptionModal" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">+ Write Prescription</button>
                 
                 <!-- Add Prescription Modal -->
                 <div id="addPrescriptionModal" class="modal-overlay">
@@ -397,13 +460,35 @@ include(SHARED_PATH . '/header.php');
                             <input type="hidden" name="action" value="save_prescription">
                             <div class="form-group" style="margin-bottom:15px;">
                                 <label>Medication *</label>
-                                <select name="inventory_id" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <select name="inventory_id" id="med_inventory_select" onchange="toggleMedCustom(this.value)" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
                                     <option value="">-- Select from Inventory --</option>
-                                    <?php while($inv = $inventory_items->fetch_assoc()) { ?>
+                                    <?php 
+                                    if ($inventory_items && $inventory_items->num_rows > 0) {
+                                        $inventory_items->data_seek(0);
+                                        while($inv = $inventory_items->fetch_assoc()) { ?>
                                         <option value="<?php echo $inv['id']; ?>"><?php echo v_wrap($inv['drug_name'] . ' (' . $inv['stock_quantity'] . ' in stock)'); ?></option>
-                                    <?php } ?>
+                                    <?php } } ?>
+                                    <option value="custom">+ Other / Custom Medication (Not in stock)</option>
                                 </select>
                             </div>
+                            <div id="custom_med_field" class="form-group" style="margin-bottom:15px; display:none;">
+                                <label>Custom Medication Name *</label>
+                                <input type="text" name="custom_medication_name" placeholder="e.g. Augmentin 625mg or Cough syrup" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            </div>
+                            <script>
+                            function toggleMedCustom(val) {
+                                var customDiv = document.getElementById('custom_med_field');
+                                var customInput = customDiv.querySelector('input');
+                                if (val === 'custom') {
+                                    customDiv.style.display = 'block';
+                                    customInput.required = true;
+                                } else {
+                                    customDiv.style.display = 'none';
+                                    customInput.required = false;
+                                    customInput.value = '';
+                                }
+                            }
+                            </script>
                             <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
                                 <div class="form-group">
                                     <label>Dosage</label>

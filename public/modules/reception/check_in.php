@@ -13,6 +13,19 @@ $specificCss = "/assets/css/encounters.css"; // We'll create this soon
 
 // Handle form submission
 if (is_post_request()) {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'cancel_appointment') {
+        $cancel_appt_id = (int)($_POST['cancel_appt_id'] ?? 0);
+        if ($cancel_appt_id > 0) {
+            $cancel_stmt = $db_1->prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = ?");
+            $cancel_stmt->bind_param("i", $cancel_appt_id);
+            $cancel_stmt->execute();
+            $cancel_stmt->close();
+            $_SESSION['message'] = "Appointment has been cancelled successfully.";
+        }
+        redirect_to(url_wrap('/modules/reception/check_in.php'));
+    }
+
     $patient_id = $_POST['patient_id'] ?? '';
     $doctor_id = $_POST['doctor_id'] ?? '';
     $priority = $_POST['priority'] ?? 'Normal';
@@ -54,6 +67,9 @@ include(SHARED_PATH . '/header.php');
         <?php if (isset($_SESSION['error'])) { echo "<div style='color:#d9534f; background:#f9eded; padding:15px; border-radius:8px; margin-bottom:20px; font-weight:500;'><i class='bi bi-exclamation-triangle-fill'></i> {$_SESSION['error']}</div>"; unset($_SESSION['error']); } ?>
 
         <?php
+        // Automatically sweep and mark past-date unattended appointments as 'No Show'
+        $db_1->query("UPDATE appointments SET status = 'No Show' WHERE status IN ('Pending', 'Approved') AND DATE(appointment_date) < CURDATE()");
+
         // Fetch pending appointments
         $app_query = $db_1->query("SELECT a.*, p.patient_id as pid, p.first_name, p.surname FROM appointments a JOIN patients p ON a.patient_id = p.id WHERE a.status = 'Pending' ORDER BY a.appointment_date ASC");
         if ($app_query && $app_query->num_rows > 0) {
@@ -74,8 +90,17 @@ include(SHARED_PATH . '/header.php');
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo v_wrap($app['pid'] . ' - ' . $app['surname'] . ' ' . $app['first_name']); ?></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo date('M d, Y h:i A', strtotime($app['appointment_date'])); ?></td>
                     <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo v_wrap($app['reason']); ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
-                        <button onclick="document.querySelector('select[name=patient_id]').value='<?php echo $app['patient_id']; ?>'; document.getElementById('appt_id_input').value='<?php echo $app['id']; ?>'; window.scrollTo(0, document.getElementById('check-in-form').offsetTop);" class="btn" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Select & Assign</button>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center; white-space: nowrap;">
+                        <button onclick="document.querySelector('select[name=patient_id]').value='<?php echo $app['patient_id']; ?>'; document.getElementById('appt_id_input').value='<?php echo $app['id']; ?>'; window.scrollTo(0, document.getElementById('check-in-form').offsetTop);" class="btn" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">
+                            <i class="bi bi-person-check"></i> Select & Assign
+                        </button>
+                        <form action="<?php echo url_wrap('/modules/reception/check_in.php'); ?>" method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
+                            <input type="hidden" name="action" value="cancel_appointment">
+                            <input type="hidden" name="cancel_appt_id" value="<?php echo $app['id']; ?>">
+                            <button type="submit" class="btn" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;" title="Cancel appointment">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 <?php } ?>

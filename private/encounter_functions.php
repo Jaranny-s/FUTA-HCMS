@@ -235,13 +235,14 @@ function get_prescriptions($encounter_id) {
     return $query->get_result();
 }
 
-function save_prescription($encounter_id, $doctor_id, $inventory_id, $dosage, $freq, $duration, $instructions) {
+function save_prescription($encounter_id, $doctor_id, $inventory_id, $dosage, $freq, $duration, $instructions, $custom_name = '') {
     global $db_1;
     
-    $medication_name = 'Prescribed Medication';
-    if ($inventory_id) {
+    $medication_name = !empty(trim($custom_name)) ? trim($custom_name) : 'Prescribed Medication';
+    $inv_id = !empty($inventory_id) ? (int)$inventory_id : null;
+    if ($inv_id) {
         $inv_q = $db_1->prepare("SELECT drug_name FROM pharmacy_inventory WHERE id = ?");
-        $inv_q->bind_param("i", $inventory_id);
+        $inv_q->bind_param("i", $inv_id);
         $inv_q->execute();
         $res = $inv_q->get_result();
         if ($row = $res->fetch_assoc()) {
@@ -252,7 +253,7 @@ function save_prescription($encounter_id, $doctor_id, $inventory_id, $dosage, $f
 
     $sql = "INSERT INTO prescriptions (encounter_id, doctor_id, inventory_id, medication_name, dosage, frequency, duration, instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     $query = $db_1->prepare($sql);
-    $query->bind_param("iiisssss", $encounter_id, $doctor_id, $inventory_id, $medication_name, $dosage, $freq, $duration, $instructions);
+    $query->bind_param("iiisssss", $encounter_id, $doctor_id, $inv_id, $medication_name, $dosage, $freq, $duration, $instructions);
     $query->execute();
     $new_id = $db_1->insert_id;
     $query->close();

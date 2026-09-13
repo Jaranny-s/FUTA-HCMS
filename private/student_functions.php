@@ -52,6 +52,7 @@ function register_student($first_name, $surname, $email, $phone, $matric_number,
 
 function get_student_appointments($patient_id) {
     global $db_1;
+    $db_1->query("UPDATE appointments SET status = 'No Show' WHERE status IN ('Pending', 'Approved') AND DATE(appointment_date) < CURDATE()");
     $sql = "SELECT a.*, d.full_name as doctor_name FROM appointments a LEFT JOIN staff d ON a.doctor_id = d.id WHERE a.patient_id = ? ORDER BY a.appointment_date DESC";
     $query = $db_1->prepare($sql);
     $query->bind_param("i", $patient_id);
