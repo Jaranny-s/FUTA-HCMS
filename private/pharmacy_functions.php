@@ -40,7 +40,7 @@ function update_inventory_stock($id, $stock_change) {
 
 function get_all_prescriptions($status = null) {
     global $db_1;
-    $sql = "SELECT pr.*, e.encounter_number, e.patient_id, p.first_name, p.surname, p.patient_category, d.full_name as doctor_name, inv.drug_name, inv.unit_price ";
+    $sql = "SELECT pr.*, e.encounter_number, e.patient_id, p.first_name, p.surname, p.patient_category, d.full_name as doctor_name, COALESCE(NULLIF(pr.medication_name, ''), inv.drug_name, 'Prescribed Medication') as drug_name, inv.unit_price ";
     $sql .= "FROM prescriptions pr ";
     $sql .= "JOIN encounters e ON pr.encounter_id = e.id ";
     $sql .= "JOIN patients p ON e.patient_id = p.id ";
@@ -63,7 +63,7 @@ function get_all_prescriptions($status = null) {
 
 function get_prescription_details($id) {
     global $db_1;
-    $sql = "SELECT pr.*, e.encounter_number, e.patient_id as e_patient_id, p.first_name, p.surname, p.patient_category, d.full_name as doctor_name, inv.drug_name, inv.unit_price, inv.stock_quantity ";
+    $sql = "SELECT pr.*, e.encounter_number, e.patient_id as e_patient_id, p.first_name, p.surname, p.patient_category, d.full_name as doctor_name, COALESCE(NULLIF(pr.medication_name, ''), inv.drug_name, 'Prescribed Medication') as drug_name, inv.unit_price, inv.stock_quantity ";
     $sql .= "FROM prescriptions pr ";
     $sql .= "JOIN encounters e ON pr.encounter_id = e.id ";
     $sql .= "JOIN patients p ON e.patient_id = p.id ";

@@ -10,6 +10,22 @@ if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], ['phar
 $page_title = "Pharmacy Inventory";
 $specificCss = "/assets/css/encounters.css"; // Reuse card layout
 
+if (isset($_GET['download_template']) && $_GET['download_template'] == '1') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="pharmacy_inventory_template.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['drug_name', 'category', 'unit_price', 'stock_quantity']);
+    fputcsv($output, ['Paracetamol 500mg', 'Tablet', '10.00', '200']);
+    fputcsv($output, ['Amoxicillin 500mg', 'Capsule', '50.00', '100']);
+    fputcsv($output, ['Cough Syrup 100ml', 'Syrup', '450.00', '50']);
+    fputcsv($output, ['Hydrocortisone 1%', 'Ointment', '300.00', '30']);
+    fputcsv($output, ['Vitamin C 100mg', 'Tablet', '15.00', '500']);
+    fclose($output);
+    exit;
+}
+
 if (is_post_request()) {
     $action = $_POST['action'] ?? '';
     
@@ -19,6 +35,88 @@ if (is_post_request()) {
     } elseif ($action === 'add_stock') {
         update_inventory_stock($_POST['inventory_id'], $_POST['stock_change']);
         $_SESSION['message'] = "Stock updated.";
+    } elseif ($action === 'import_csv') {
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            $_SESSION['error'] = "File upload failed. Please choose a valid CSV file.";
+        } else {
+            $file = $_FILES['csv_file'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if ($ext !== 'csv') {
+                $_SESSION['error'] = "Invalid file type. Please upload a .csv file.";
+            } else {
+                $handle = fopen($file['tmp_name'], 'r');
+                if ($handle === false) {
+                    $_SESSION['error'] = "Could not open uploaded file.";
+                } else {
+                    $raw_headers = fgetcsv($handle);
+                    if (!$raw_headers) {
+                        $_SESSION['error'] = "The uploaded CSV file is empty.";
+                    } else {
+                        $headers = array_map(function($h) {
+                            return strtolower(trim(str_replace([' ', '_', '-'], '', $h)));
+                        }, $raw_headers);
+
+                        $mode = $_POST['import_mode'] ?? 'restock';
+                        $added = 0;
+                        $updated = 0;
+                        $skipped = 0;
+
+                        while (($row = fgetcsv($handle)) !== false) {
+                            if (empty(array_filter($row))) continue;
+                            $data = array_combine($headers, $row);
+                            if (!$data) continue;
+
+                            $name = trim($data['drugname'] ?? $data['name'] ?? $data['medication'] ?? '');
+                            if (empty($name)) {
+                                $skipped++;
+                                continue;
+                            }
+
+                            $cat = trim($data['category'] ?? 'Tablet');
+                            if (!in_array($cat, ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Other'])) {
+                                $cat = 'Other';
+                            }
+
+                            $price = isset($data['unitprice']) ? (float)$data['unitprice'] : (isset($data['price']) ? (float)$data['price'] : 0.0);
+                            $qty = isset($data['stockquantity']) ? (int)$data['stockquantity'] : (isset($data['stock']) ? (int)$data['stock'] : (isset($data['quantity']) ? (int)$data['quantity'] : 0));
+
+                            // Check if drug already exists
+                            $check_stmt = $db_1->prepare("SELECT id, stock_quantity FROM pharmacy_inventory WHERE LOWER(drug_name) = LOWER(?) LIMIT 1");
+                            $check_stmt->bind_param("s", $name);
+                            $check_stmt->execute();
+                            $check_res = $check_stmt->get_result();
+                            $existing = $check_res->fetch_assoc();
+                            $check_stmt->close();
+
+                            if ($existing) {
+                                $item_id = (int)$existing['id'];
+                                if ($mode === 'overwrite') {
+                                    $up_stmt = $db_1->prepare("UPDATE pharmacy_inventory SET stock_quantity = ?, unit_price = IF(? > 0, ?, unit_price), category = IF(? != '', ?, category) WHERE id = ?");
+                                    $up_stmt->bind_param("idsssi", $qty, $price, $price, $cat, $cat, $item_id);
+                                } else {
+                                    $up_stmt = $db_1->prepare("UPDATE pharmacy_inventory SET stock_quantity = stock_quantity + ?, unit_price = IF(? > 0, ?, unit_price), category = IF(? != '', ?, category) WHERE id = ?");
+                                    $up_stmt->bind_param("idsssi", $qty, $price, $price, $cat, $cat, $item_id);
+                                }
+                                $up_stmt->execute();
+                                $up_stmt->close();
+                                $updated++;
+                            } else {
+                                $ins_stmt = $db_1->prepare("INSERT INTO pharmacy_inventory (drug_name, category, unit_price, stock_quantity) VALUES (?, ?, ?, ?)");
+                                $ins_stmt->bind_param("ssdi", $name, $cat, $price, $qty);
+                                $ins_stmt->execute();
+                                $ins_stmt->close();
+                                $added++;
+                            }
+                        }
+                        fclose($handle);
+                        $_SESSION['message'] = "Bulk inventory processing completed: {$added} new drug(s) added, {$updated} existing drug(s) restocked/updated.";
+                        if ($skipped > 0) {
+                            $_SESSION['message'] .= " ({$skipped} invalid rows skipped).";
+                        }
+                    }
+                }
+            }
+        }
     }
     
     redirect_to(url_wrap('/modules/pharmacy/inventory.php'));
@@ -42,9 +140,62 @@ include(SHARED_PATH . '/header.php');
         <div><?php echo display_session_message(); ?></div>
 
         <div class="clinical-grid">
-            <div class="card" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: none; box-shadow: none; padding: 0;">
+            <div class="card" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: none; box-shadow: none; padding: 0; flex-wrap: wrap; gap: 10px;">
                 <h3 style="margin: 0;">Current Inventory</h3>
-                <button data-modal-target="addDrugModal" class="btn btn-primary" style="background:#0F4E74; color:white; border:none; padding:10px 20px; border-radius:5px;"><i class="bi bi-plus-lg"></i> Add New Drug</button>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <a href="?download_template=1" class="btn" style="background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:5px; text-decoration:none; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-file-earmark-arrow-down"></i> CSV Template
+                    </a>
+                    <button data-modal-target="bulkImportModal" class="btn" style="background:#28a745; color:white; border:none; padding:10px 16px; border-radius:5px; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Bulk Import / Restock (CSV)
+                    </button>
+                    <button data-modal-target="addDrugModal" class="btn btn-primary" style="background:#0F4E74; color:white; border:none; padding:10px 18px; border-radius:5px; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-plus-lg"></i> Add New Drug
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulk Import / Restock Modal -->
+            <div id="bulkImportModal" class="modal-overlay">
+                <div class="modal-content" style="max-width: 540px; text-align: left;">
+                    <button class="modal-close" data-modal-close>&times;</button>
+                    <h3 class="modal-title" style="color: #0F4E74; margin-bottom: 12px;"><i class="bi bi-file-earmark-spreadsheet"></i> Bulk Import & Restock</h3>
+                    
+                    <div style="background: #e7f3ff; border: 1px solid #b6d4fe; color: #084298; padding: 12px 15px; border-radius: 6px; font-size: 0.88rem; margin-bottom: 18px;">
+                        <strong>Expected CSV Columns:</strong> <code>drug_name, category, unit_price, stock_quantity</code><br>
+                        <a href="?download_template=1" style="color: #0F4E74; font-weight: 600; text-decoration: underline; margin-top: 6px; display: inline-block;">
+                            <i class="bi bi-download"></i> Download pre-formatted sample CSV template
+                        </a>
+                    </div>
+
+                    <form action="" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="import_csv">
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label style="display:block; margin-bottom: 6px; font-weight: 500;">Select CSV File *</label>
+                            <input type="file" name="csv_file" accept=".csv" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label style="display:block; margin-bottom: 8px; font-weight: 500;">Restock Mode for Existing Drugs:</label>
+                            <label style="display:block; margin-bottom: 8px; cursor: pointer; font-size: 0.9rem;">
+                                <input type="radio" name="import_mode" value="restock" checked style="margin-right: 6px;">
+                                <strong>Add to current stock (Physical Restocking)</strong>
+                                <span style="display:block; color:#666; font-size:0.82rem; margin-left: 20px;">Increases existing stock counts by the number in your CSV.</span>
+                            </label>
+                            <label style="display:block; cursor: pointer; font-size: 0.9rem;">
+                                <input type="radio" name="import_mode" value="overwrite" style="margin-right: 6px;">
+                                <strong>Set exact stock count (Audit / Physical Count)</strong>
+                                <span style="display:block; color:#666; font-size:0.82rem; margin-left: 20px;">Replaces existing stock counts with the exact number in your CSV.</span>
+                            </label>
+                            <small style="color: #0F4E74; display: block; margin-top: 10px; font-style: italic;">Note: Any medication not already in inventory will be automatically created as a new drug record.</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="background: #28a745; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+                            <i class="bi bi-upload"></i> Upload & Process Inventory
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <!-- Add Drug Modal -->

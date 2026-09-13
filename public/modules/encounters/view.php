@@ -27,8 +27,9 @@ $is_privileged = in_array($current_role, ['admin', 'super_admin', 'nurse']);
 
 // A doctor trying to perform a write action on someone else's encounter is blocked at form level.
 // We capture this flag and pass it to the UI so write buttons are hidden/disabled.
-$can_write_clinical = !$is_doctor || $is_assigned_doctor;
-$can_record_vitals = hasPermission('record_vitals') || hasPermission('edit_vitals') || in_array($current_role, ['nurse', 'doctor', 'admin', 'super_admin']);
+$is_encounter_active = ($encounter['status'] !== 'Completed' && $encounter['status'] !== 'Cancelled');
+$can_write_clinical = $is_encounter_active && (!$is_doctor || $is_assigned_doctor);
+$can_record_vitals = $is_encounter_active && (hasPermission('record_vitals') || hasPermission('edit_vitals') || in_array($current_role, ['nurse', 'doctor', 'admin', 'super_admin']));
 
 // Handle POST submissions
 if (is_post_request()) {
@@ -99,6 +100,19 @@ if (is_post_request()) {
             update_encounter_status($encounter_id, 'Completed');
             $_SESSION['message'] = "Encounter marked as Completed successfully.";
         }
+    } elseif ($action === 'cancel_encounter') {
+        $category = trim($_POST['cancel_category'] ?? '');
+        $notes = trim($_POST['cancel_notes'] ?? '');
+        $full_reason = $category . (!empty($notes) ? " - " . $notes : "");
+        
+        if (empty($category) && empty($notes)) {
+            $_SESSION['error'] = "A reason must be selected or provided to void this encounter.";
+        } elseif (!in_array($current_role, ['doctor', 'receptionist', 'admin', 'super_admin'])) {
+            $_SESSION['error'] = "Access Denied: You do not have permission to void encounters.";
+        } else {
+            cancel_encounter($encounter_id, $full_reason, $staff_id);
+            $_SESSION['message'] = "Encounter #{$encounter['encounter_number']} has been voided/cancelled.";
+        }
     }
     
     // Redirect to prevent form resubmission
@@ -151,6 +165,20 @@ include(SHARED_PATH . '/header.php');
         </div>
 
         <div><?php echo display_session_message(); ?></div>
+
+        <?php if ($encounter['status'] === 'Cancelled'): ?>
+        <div style="background:#fff2f2; border:1px solid #f5c2c7; border-left:5px solid #dc3545; border-radius:8px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:flex-start; gap:14px;">
+            <i class="bi bi-x-octagon-fill" style="font-size:1.6rem; color:#dc3545; line-height:1; margin-top:2px;"></i>
+            <div>
+                <strong style="color:#b02a37; font-size:1.05rem; display:block; margin-bottom:4px;">Encounter Voided / Cancelled</strong>
+                <span style="color:#555; font-size:0.92rem;">
+                    <strong>Cancelled on:</strong> <?php echo !empty($encounter['cancelled_at']) ? date('d M Y, h:i A', strtotime($encounter['cancelled_at'])) : date('d M Y, h:i A', strtotime($encounter['created_at'])); ?> &bull; 
+                    <strong>Reason:</strong> <?php echo v_wrap($encounter['cancel_reason'] ?? 'No reason recorded'); ?>
+                </span>
+                <div style="margin-top:6px; font-size:0.85rem; color:#777;">This encounter is closed and all clinical documentation is retained in read-only mode for medical audit purposes.</div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if ($is_doctor && !$is_assigned_doctor): ?>
         <div style="background:#fff3cd; border:1px solid #ffc107; border-left:4px solid #e6a000; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
@@ -512,6 +540,66 @@ include(SHARED_PATH . '/header.php');
                     </div>
                 </div>
                 <?php } ?>
+            </div>
+        </div>
+        <?php } ?>
+
+        <?php if ($is_encounter_active && in_array($current_role, ['doctor', 'receptionist', 'admin', 'super_admin'])) { ?>
+        <!-- Danger Zone: Void Encounter -->
+        <div style="margin-top: 40px; border: 1px solid #f5c2c7; background: #fffdfd; border-radius: 8px; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h4 style="margin: 0 0 4px 0; color: #842029; font-size: 1rem;"><i class="bi bi-shield-exclamation"></i> Administrative Option: Void Encounter</h4>
+                <p style="margin: 0; color: #666; font-size: 0.85rem;">Permanently cancel this encounter if patient left without being seen (LWBS), accidental check-in, or referred/transferred out.</p>
+            </div>
+            <div>
+                <button type="button" data-modal-target="voidEncounterModal" class="btn" style="background: transparent; color: #dc3545; border: 1px solid #dc3545; padding: 7px 16px; border-radius: 5px; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#dc3545';">
+                    <i class="bi bi-x-circle"></i> Void Encounter
+                </button>
+            </div>
+        </div>
+
+        <!-- Void Encounter Confirmation Modal -->
+        <div id="voidEncounterModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 520px; text-align: left;">
+                <button class="modal-close" data-modal-close>&times;</button>
+                <h3 class="modal-title" style="color: #dc3545; margin-bottom: 12px;"><i class="bi bi-exclamation-triangle-fill"></i> Void Clinical Encounter</h3>
+                
+                <div style="background: #f8d7da; border: 1px solid #f5c2c7; color: #721c24; padding: 12px 15px; border-radius: 6px; font-size: 0.88rem; margin-bottom: 18px;">
+                    <strong>Caution:</strong> Voiding will permanently cancel this encounter, remove it from the active clinic queue, and cancel any linked appointment. This action cannot be reversed.
+                </div>
+
+                <form action="" method="post">
+                    <input type="hidden" name="action" value="cancel_encounter">
+                    
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:500;">Reason for Cancellation *</label>
+                        <select name="cancel_category" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                            <option value="">-- Select Reason --</option>
+                            <option value="Patient Left Without Being Seen (LWBS)">Patient Left Without Being Seen (LWBS)</option>
+                            <option value="Duplicate / Accidental Check-in">Duplicate / Accidental Check-in</option>
+                            <option value="Patient Left Against Medical Advice (LAMA)">Patient Left Against Medical Advice (LAMA)</option>
+                            <option value="Emergency Transfer to External Facility">Emergency Transfer to External Facility</option>
+                            <option value="Patient Refused Treatment">Patient Refused Treatment</option>
+                            <option value="Other Administrative Reason">Other Administrative Reason</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:500;">Detailed Explanation / Clinical Notes</label>
+                        <textarea name="cancel_notes" rows="3" placeholder="e.g. Student had to leave for lecture before consultation; vitals were normal." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 20px; display: flex; align-items: flex-start; gap: 8px;">
+                        <input type="checkbox" id="confirm_void_chk" required onchange="document.getElementById('void_submit_btn').disabled = !this.checked;" style="margin-top: 3px;">
+                        <label for="confirm_void_chk" style="font-size: 0.85rem; color: #444; cursor: pointer;">
+                            I confirm that this encounter should be permanently voided and closed.
+                        </label>
+                    </div>
+
+                    <button type="submit" id="void_submit_btn" disabled class="btn" style="background: #dc3545; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer;">
+                        <i class="bi bi-x-circle-fill"></i> Confirm & Void Encounter
+                    </button>
+                </form>
             </div>
         </div>
         <?php } ?>

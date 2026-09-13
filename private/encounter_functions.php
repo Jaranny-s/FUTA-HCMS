@@ -142,6 +142,37 @@ function update_encounter_status($id, $status) {
     return $affected;
 }
 
+function cancel_encounter($id, $reason, $staff_id = null) {
+    global $db_1;
+    $sql = "UPDATE encounters SET status = 'Cancelled', cancelled_at = NOW(), cancel_reason = ? WHERE id = ?";
+    $query = $db_1->prepare($sql);
+    $query->bind_param("si", $reason, $id);
+    $query->execute();
+    $affected = $query->affected_rows > 0;
+    $query->close();
+
+    // If linked to an appointment, synchronize appointment status to Cancelled
+    $app_q = $db_1->prepare("SELECT appointment_id FROM encounters WHERE id = ?");
+    $app_q->bind_param("i", $id);
+    $app_q->execute();
+    $res = $app_q->get_result();
+    if ($row = $res->fetch_assoc()) {
+        if (!empty($row['appointment_id'])) {
+            $up_app = $db_1->prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = ?");
+            $up_app->bind_param("i", $row['appointment_id']);
+            $up_app->execute();
+            $up_app->close();
+        }
+    }
+    $app_q->close();
+
+    if (function_exists('log_action') && $staff_id) {
+        log_action($staff_id, 'Cancel Encounter', "Encounter #{$id} was cancelled. Reason: {$reason}");
+    }
+
+    return $affected;
+}
+
 // --- Vitals ---
 function get_vitals($encounter_id) {
     global $db_1;
@@ -228,7 +259,7 @@ function save_diagnosis($encounter_id, $doctor_id, $type, $diagnosis, $icd, $not
 // --- Prescriptions ---
 function get_prescriptions($encounter_id) {
     global $db_1;
-    $sql = "SELECT p.*, i.drug_name as medication_name FROM prescriptions p LEFT JOIN pharmacy_inventory i ON p.inventory_id = i.id WHERE p.encounter_id = ? ORDER BY p.created_at ASC";
+    $sql = "SELECT p.*, COALESCE(NULLIF(p.medication_name, ''), i.drug_name, 'Prescribed Medication') as medication_name FROM prescriptions p LEFT JOIN pharmacy_inventory i ON p.inventory_id = i.id WHERE p.encounter_id = ? ORDER BY p.created_at ASC";
     $query = $db_1->prepare($sql);
     $query->bind_param("i", $encounter_id);
     $query->execute();
