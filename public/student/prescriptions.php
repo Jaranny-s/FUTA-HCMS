@@ -46,7 +46,7 @@ $page_title = 'My Prescriptions';
                         <div class="appointment-list">
                         <?php while($rx = $prescriptions->fetch_assoc()) { ?>
                             <div class="appointment-card" style="border-left: 4px solid #0F4E74;">
-                                <div style="display: flex; justify-content: space-between;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                                     <div>
                                         <h4 style="margin: 0 0 5px 0; color: #333;"><?php echo v_wrap($rx['drug_name'] ?? $rx['medication_name']); ?></h4>
                                         <p style="margin: 0; color: #666; font-size: 0.9rem;">

@@ -1,10 +1,11 @@
-/* student_portal.css - Lighter, vibrant theme for students */
+/* student_portal.css - Modern, Responsive Theme for FUTA HCMS Student Portal */
 
 body {
     margin: 0;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #f4f7f6;
     color: #333;
+    -webkit-font-smoothing: antialiased;
 }
 
 .portal-header {
@@ -44,9 +45,13 @@ body {
 }
 
 .logout-btn {
-    color: #ff6b6b;
+    color: #ff8b8b;
     text-decoration: none;
     font-weight: 600;
+}
+
+.logout-btn:hover {
+    color: #ff5252;
 }
 
 .portal-container {
@@ -56,12 +61,12 @@ body {
 }
 
 .welcome-banner {
-    background: linear-gradient(135deg, #0F4E74, #8e8afc);
+    background: linear-gradient(135deg, #0F4E74, #1a7bb5);
     color: white;
     padding: 30px;
     border-radius: 12px;
     margin-bottom: 30px;
-    box-shadow: 0 10px 20px rgba(15, 78, 116,0.2);
+    box-shadow: 0 10px 20px rgba(15, 78, 116, 0.15);
 }
 
 .welcome-banner h1 {
@@ -71,7 +76,7 @@ body {
 
 .welcome-banner p {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     opacity: 0.9;
 }
 
@@ -84,7 +89,7 @@ body {
 
 .main-column {
     flex: 3;
-    min-width: 0; /* Fix overflow */
+    min-width: 0; /* Fix flex overflow */
 }
 
 .sidebar {
@@ -97,6 +102,7 @@ body {
     border-radius: 12px;
     padding: 25px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    border: 1px solid #f0f0f0;
 }
 
 .card h3 {
@@ -116,7 +122,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: transform 0.2s;
+    background: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .appointment-item:hover {
@@ -125,7 +132,7 @@ body {
 }
 
 .appointment-item .date {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: #0F4E74;
 }
@@ -134,18 +141,65 @@ body {
     color: #666;
     font-size: 0.9rem;
     margin-top: 5px;
+    line-height: 1.4;
 }
 
+.appointment-card {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.appointment-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+}
+
+/* Status Badges */
 .badge {
-    padding: 5px 10px;
+    display: inline-block;
+    padding: 5px 12px;
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
+    white-space: nowrap;
 }
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .status-pending { background: #fff3cd; color: #856404; }
 .status-approved { background: #d1ecf1; color: #0c5460; }
+.status-checked-in { background: #cce5ff; color: #004085; }
+.status-in-progress { background: #e2e3e5; color: #383d41; }
 .status-completed { background: #d4edda; color: #155724; }
+.status-cancelled { background: #f8d7da; color: #721c24; }
+.status-no-show { background: #e2e3e5; color: #6c757d; }
 
+/* Table Responsive Wrapper */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px;
+}
+
+.table-responsive table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 520px;
+}
+
+/* Action Buttons */
 .action-btn {
     display: flex;
     align-items: center;
@@ -153,204 +207,14 @@ body {
     box-sizing: border-box;
     width: 100%;
     text-align: left;
-    padding: 15px;
+    padding: 14px 16px;
     background: #f8f9fa;
     color: #333;
     text-decoration: none;
     border-radius: 8px;
     font-weight: 600;
-    margin-bottom: 15px;
-    border: 1px solid #eee;
-    transition: all 0.2s;
-}
-
-.action-btn.primary {
-    background: #0F4E74;
-    color: white;
-    border: none;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.action-btn.active {
-    background: #e6f9fa;
-    color: #0F4E74;
-    border-color: #0F4E74;
-    font-weight: 700;
-}
-.action-btn.primary.active {
-    background: #0F4E74;
-    color: white;
-}
-
-/* Forms */
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; color: #444; font-weight: 600; }
-/* student_portal.css - Lighter, vibrant theme for students */
-
-body {
-    margin: 0;
-    font-family: 'Inter', sans-serif;
-    background: #f4f7f6;
-    color: #333;
-}
-
-.portal-header {
-    background: #0F4E74;
-    padding: 15px 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-    color: white;
-}
-
-.portal-header .brand {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.portal-header .user-menu {
-    display: flex;
-    align-items: center;
-    gap: 15px;
     font-size: 0.95rem;
-}
-
-.portal-header .user-menu a {
-    color: #e6f9fa;
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.portal-header .user-menu a:hover {
-    color: white;
-}
-
-.logout-btn {
-    color: #ff6b6b;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.portal-container {
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-.welcome-banner {
-    background: linear-gradient(135deg, #0F4E74, #8e8afc);
-    color: white;
-    padding: 30px;
-    border-radius: 12px;
-    margin-bottom: 30px;
-    box-shadow: 0 10px 20px rgba(15, 78, 116,0.2);
-}
-
-.welcome-banner h1 {
-    margin: 0 0 10px 0;
-    font-size: 2rem;
-}
-
-.welcome-banner p {
-    margin: 0;
-    font-size: 1.1rem;
-    opacity: 0.9;
-}
-
-.dashboard-grid {
-    display: flex;
-    flex-direction: row-reverse;
-    gap: 25px;
-    align-items: flex-start;
-}
-
-.main-column {
-    flex: 3;
-    min-width: 0; /* Fix overflow */
-}
-
-.sidebar {
-    flex: 1;
-    min-width: 0;
-}
-
-.card {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
-}
-
-.card h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    color: #222;
-    font-size: 1.2rem;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 10px;
-}
-
-.appointment-item {
-    padding: 15px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: transform 0.2s;
-}
-
-.appointment-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.appointment-item .date {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #0F4E74;
-}
-
-.appointment-item .details {
-    color: #666;
-    font-size: 0.9rem;
-    margin-top: 5px;
-}
-
-.badge {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-.status-pending { background: #fff3cd; color: #856404; }
-.status-approved { background: #d1ecf1; color: #0c5460; }
-.status-completed { background: #d4edda; color: #155724; }
-
-.action-btn {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-sizing: border-box;
-    width: 100%;
-    text-align: left;
-    padding: 15px;
-    background: #f8f9fa;
-    color: #333;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border: 1px solid #eee;
     transition: all 0.2s;
 }
@@ -363,7 +227,7 @@ body {
 
 .action-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
 
 .action-btn.active {
@@ -372,6 +236,7 @@ body {
     border-color: #0F4E74;
     font-weight: 700;
 }
+
 .action-btn.primary.active {
     background: #0F4E74;
     color: white;
@@ -384,7 +249,7 @@ body {
     width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-    border-color: #0F4E74; outline: none; box-shadow: 0 0 0 3px rgba(15, 78, 116,0.1);
+    border-color: #0F4E74; outline: none; box-shadow: 0 0 0 3px rgba(15, 78, 116, 0.1);
 }
 
 /* Modal Base Styles */
@@ -402,6 +267,8 @@ body {
     justify-content: center;
     opacity: 0;
     transition: opacity 0.3s ease;
+    padding: 15px;
+    box-sizing: border-box;
 }
 
 .modal-overlay.active {
@@ -412,13 +279,16 @@ body {
 .modal-content {
     background: white;
     border-radius: 12px;
-    width: 90%;
+    width: 100%;
     max-width: 500px;
     padding: 30px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     transform: translateY(-20px);
     transition: transform 0.3s ease;
     position: relative;
+    box-sizing: border-box;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-overlay.active .modal-content {
@@ -427,8 +297,8 @@ body {
 
 .modal-close {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 18px;
+    right: 18px;
     font-size: 1.5rem;
     color: #888;
     cursor: pointer;
@@ -436,6 +306,7 @@ body {
     border: none;
     padding: 0;
     line-height: 1;
+    transition: color 0.2s;
 }
 
 .modal-close:hover {
@@ -449,4 +320,83 @@ body {
     margin-bottom: 20px;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
+}
+
+/* Mobile Responsiveness (< 768px) */
+@media (max-width: 768px) {
+    .portal-header {
+        padding: 14px 18px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .portal-header .brand {
+        font-size: 1.05rem;
+    }
+
+    .portal-header .user-menu {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.88rem;
+        border-top: 1px solid rgba(255,255,255,0.15);
+        padding-top: 10px;
+    }
+
+    .portal-container {
+        margin: 18px auto;
+        padding: 0 12px;
+    }
+
+    .welcome-banner {
+        padding: 20px 16px;
+        margin-bottom: 20px;
+        border-radius: 10px;
+    }
+
+    .welcome-banner h1 {
+        font-size: 1.45rem;
+    }
+
+    .welcome-banner p {
+        font-size: 0.95rem;
+    }
+
+    .dashboard-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .main-column, .sidebar {
+        width: 100%;
+        flex: none;
+    }
+
+    .card {
+        padding: 20px 16px;
+        border-radius: 10px;
+    }
+
+    .appointment-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .appointment-item > div:last-child {
+        align-self: flex-start;
+    }
+
+    .modal-content {
+        padding: 20px 16px;
+        border-radius: 10px;
+    }
+
+    .action-btn {
+        padding: 12px 14px;
+        font-size: 0.9rem;
+    }
 }

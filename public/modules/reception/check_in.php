@@ -36,10 +36,27 @@ if (is_post_request()) {
         redirect_to($_SERVER['HTTP_REFERER'] ?? url_wrap('/modules/encounters/index.php'));
     } else {
         $created_by = $_SESSION['staff_id'];
-        $encounter_id = create_encounter($patient_id, $doctor_id, null, $priority, $created_by);
+        $appointment_id = !is_blank($appt_id) ? (int)$appt_id : null;
         
-        if (!is_blank($appt_id)) {
-            $db_1->query("UPDATE appointments SET status = 'Checked In', doctor_id = '$doctor_id' WHERE id = '$appt_id'");
+        // If appt_id wasn't explicitly provided, check if patient has an active appointment for today
+        if (empty($appointment_id)) {
+            $find_app = $db_1->prepare("SELECT id FROM appointments WHERE patient_id = ? AND status IN ('Pending', 'Approved') AND DATE(appointment_date) = CURDATE() ORDER BY id DESC LIMIT 1");
+            $find_app->bind_param("i", $patient_id);
+            $find_app->execute();
+            $find_res = $find_app->get_result();
+            if ($app_row = $find_res->fetch_assoc()) {
+                $appointment_id = (int)$app_row['id'];
+            }
+            $find_app->close();
+        }
+
+        $encounter_id = create_encounter($patient_id, $doctor_id, $appointment_id, $priority, $created_by);
+        
+        if ($appointment_id) {
+            $up_app_stmt = $db_1->prepare("UPDATE appointments SET status = 'Checked In', doctor_id = ? WHERE id = ?");
+            $up_app_stmt->bind_param("ii", $doctor_id, $appointment_id);
+            $up_app_stmt->execute();
+            $up_app_stmt->close();
         }
         
         $_SESSION['message'] = "Patient successfully checked in! Encounter Created.";
@@ -115,7 +132,7 @@ include(SHARED_PATH . '/header.php');
             </div>
             
             <form action="<?php echo url_wrap('/modules/reception/check_in.php'); ?>" method="post" style="padding: 30px;">
-                <input type="hidden" name="appt_id" id="appt_id_input" value="">
+                <input type="hidden" name="appt_id" id="appt_id_input" value="<?php echo isset($_GET['appt_id']) ? (int)$_GET['appt_id'] : ''; ?>">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
                     <div class="form-group" style="margin: 0;">

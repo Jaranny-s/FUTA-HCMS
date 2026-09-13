@@ -138,6 +138,12 @@ $isIncomplete = empty($student['gender'])
             .form-row-2, .form-row-3 {
                 grid-template-columns: 1fr;
             }
+            .profile-hero {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+                padding: 15px;
+            }
         }
         .profile-hero {
             display: flex;

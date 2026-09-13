@@ -54,12 +54,12 @@ $defaultImage = 'default_profile_pic.png';
         <div><?php echo display_session_message(); ?></div>
 
         <?php if ($is_profile_incomplete) { ?>
-            <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 8px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                <div>
+            <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 8px; padding: 15px 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div style="flex: 1; min-width: 240px;">
                     <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px; font-size: 1.1rem;"></i>
                     <strong>Profile Incomplete:</strong> Your medical profile is missing key details (Date of Birth, Next of Kin, Department). Please complete your profile to finalize clinic clearance.
                 </div>
-                <a href="profile.php" style="background: #0F4E74; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 600; white-space: nowrap; margin-left: 15px;">Complete Profile &rarr;</a>
+                <a href="profile.php" style="background: #0F4E74; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 600; white-space: nowrap; display: inline-block;">Complete Profile &rarr;</a>
             </div>
         <?php } ?>
 
@@ -135,7 +135,7 @@ $defaultImage = 'default_profile_pic.png';
             <p style="color: #666; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;">
                 Welcome to FUTA Health Centre! Your medical profile is currently incomplete. Completing your profile details (such as Date of Birth, Department, Medical history, and Next of Kin) ensures healthcare providers have the vital information needed to serve you quickly.
             </p>
-            <div style="display: flex; gap: 12px; justify-content: center;">
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
                 <a href="dashboard.php?skip_profile_prompt=1" class="action-btn" style="width: auto; padding: 10px 22px; margin-bottom: 0; text-align: center; justify-content: center; background: #e9ecef; color: #495057; border: 1px solid #ced4da;">Skip for now</a>
                 <a href="profile.php" class="action-btn primary" style="width: auto; padding: 10px 22px; margin-bottom: 0; text-align: center; justify-content: center;">Complete Profile <i class="bi bi-arrow-right" style="margin-left: 5px;"></i></a>
             </div>

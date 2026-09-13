@@ -53,7 +53,7 @@ $page_title = 'Medical Records';
                             // In a real app we'd join, but we can do a quick query or just show the doctor name and date
                             ?>
                             <div class="appointment-card" style="border-left: 4px solid #1bc03d;">
-                                <div style="display: flex; justify-content: space-between;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                                     <div>
                                         <h4 style="margin: 0 0 5px 0; color: #333;">Visit on <?php echo date('d M Y', strtotime($rec['created_at'])); ?></h4>
                                         <p style="margin: 0; color: #666; font-size: 0.9rem;">

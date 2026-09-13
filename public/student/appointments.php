@@ -41,22 +41,24 @@ $page_title = 'My Appointments';
                     <h3><i class="bi bi-calendar2-check"></i> All Appointments</h3>
                     
                     <?php if ($all_appointments->num_rows > 0) { ?>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                            <tr style="border-bottom: 2px solid #eee; text-align: left;">
-                                <th style="padding: 10px;">Date & Time</th>
-                                <th style="padding: 10px;">Type</th>
-                                <th style="padding: 10px;">Reason</th>
-                                <th style="padding: 10px;">Status</th>
-                            </tr>
-                            <?php while($app = $all_appointments->fetch_assoc()) { ?>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px 10px;"><?php echo date('d M Y, h:i A', strtotime($app['appointment_date'])); ?></td>
-                                <td style="padding: 15px 10px;"><?php echo v_wrap($app['appointment_type']); ?></td>
-                                <td style="padding: 15px 10px;"><?php echo v_wrap($app['reason']); ?></td>
-                                <td style="padding: 15px 10px;"><span class="badge status-<?php echo str_replace(' ', '-', strtolower($app['status'])); ?>"><?php echo v_wrap($app['status']); ?></span></td>
-                            </tr>
-                            <?php } ?>
-                        </table>
+                        <div class="table-responsive">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                                    <th style="padding: 10px;">Date & Time</th>
+                                    <th style="padding: 10px;">Type</th>
+                                    <th style="padding: 10px;">Reason</th>
+                                    <th style="padding: 10px;">Status</th>
+                                </tr>
+                                <?php while($app = $all_appointments->fetch_assoc()) { ?>
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 15px 10px;"><?php echo date('d M Y, h:i A', strtotime($app['appointment_date'])); ?></td>
+                                    <td style="padding: 15px 10px;"><?php echo v_wrap($app['appointment_type']); ?></td>
+                                    <td style="padding: 15px 10px;"><?php echo v_wrap($app['reason']); ?></td>
+                                    <td style="padding: 15px 10px;"><span class="badge status-<?php echo str_replace(' ', '-', strtolower($app['status'])); ?>"><?php echo v_wrap($app['status']); ?></span></td>
+                                </tr>
+                                <?php } ?>
+                            </table>
+                        </div>
                     <?php } else { ?>
                         <p style="color:#666; text-align: center; margin-top: 30px;">You have not booked any appointments yet.</p>
                         <div style="text-align: center;"><button data-modal-target="bookAppointmentModal" class="action-btn primary" style="display:inline-block; width:auto; padding:10px 20px; cursor:pointer; border:none; font-family:inherit;">Book Now</button></div>
