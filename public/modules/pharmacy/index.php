@@ -23,15 +23,16 @@ if (is_post_request()) {
             redirect_to(url_wrap('/modules/pharmacy/index.php'));
         }
         $rx_id = (int)$_POST['prescription_id'];
-        $quantity = (int)$_POST['quantity'];
+        $quantity = (int)($_POST['quantity'] ?? 1);
         $remarks = $_POST['remarks'] ?? '';
+        $manual_inv_id = !empty($_POST['selected_inventory_id']) ? (int)$_POST['selected_inventory_id'] : null;
         $staff_id = $_SESSION['staff_id'];
         
         $rx_details = get_prescription_details($rx_id);
         
-        if (dispense_prescription($rx_id, $staff_id, $quantity, $remarks)) {
+        if (dispense_prescription($rx_id, $staff_id, $quantity, $remarks, $manual_inv_id)) {
             $_SESSION['message'] = "Prescription dispensed successfully!";
-            if ($rx_details && $rx_details['patient_category'] !== 'Student' && $rx_details['inventory_id']) {
+            if ($rx_details && $rx_details['patient_category'] !== 'Student' && ($rx_details['inventory_id'] || $manual_inv_id)) {
                 $_SESSION['message'] .= " A bill was automatically generated for the patient.";
             }
         } else {
@@ -107,13 +108,14 @@ include(SHARED_PATH . '/header.php');
                                                 <p style="margin-bottom:5px;"><strong>Instructions:</strong> <span style="background:#fff3cd; color:#856404; padding:2px 5px; border-radius:4px; font-size:0.9rem;"><?php echo v_wrap($rx_details['instructions']); ?></span></p>
                                             </div>
 
-                                            <?php if ($rx_details['inventory_id']) { ?>
-                                                <form action="index.php" method="post">
-                                                    <input type="hidden" name="action" value="dispense">
-                                                    <input type="hidden" name="prescription_id" value="<?php echo $rx['id']; ?>">
-                                                    
+                                            <form action="index.php" method="post">
+                                                <input type="hidden" name="action" value="dispense">
+                                                <input type="hidden" name="prescription_id" value="<?php echo $rx['id']; ?>">
+
+                                                <?php if (!empty($rx_details['inventory_id'])) { ?>
                                                     <div style="margin-bottom:10px; font-size:0.9rem;">
-                                                        <strong>Current Stock:</strong> <span style="color:<?php echo $rx_details['stock_quantity'] > 10 ? 'green' : 'red'; ?>"><?php echo v_wrap($rx_details['stock_quantity']); ?> units</span><br>
+                                                        <strong>Matched Stock:</strong> <span style="color:#0F4E74; font-weight:600;"><?php echo v_wrap($rx_details['drug_name']); ?></span><br>
+                                                        <strong>Current Stock:</strong> <span style="color:<?php echo $rx_details['stock_quantity'] > 10 ? 'green' : 'red'; ?>"><?php echo v_wrap($rx_details['stock_quantity']); ?> units available</span><br>
                                                         <?php if($rx_details['patient_category'] !== 'Student') { ?>
                                                             <span style="color:#721c24;">⚠️ Since patient is a <b><?php echo v_wrap($rx_details['patient_category']); ?></b>, dispensing will auto-generate a bill.</span>
                                                         <?php } else { ?>
@@ -123,21 +125,48 @@ include(SHARED_PATH . '/header.php');
 
                                                     <div class="form-group" style="margin-bottom:15px;">
                                                         <label>Quantity to Dispense *</label>
-                                                        <input type="number" name="quantity" required min="1" max="<?php echo $rx_details['stock_quantity']; ?>" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ddd;">
+                                                        <input type="number" name="quantity" required min="1" max="<?php echo max(1, (int)$rx_details['stock_quantity']); ?>" value="1" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ddd;">
                                                     </div>
+                                                <?php } else { ?>
+                                                    <div style="background:#fff3cd; color:#856404; padding:12px; border-radius:6px; margin-bottom:15px; font-size:0.9rem; border:1px solid #ffeeba;">
+                                                        <i class="bi bi-info-circle-fill" style="margin-right:5px;"></i>
+                                                        This medication was entered as a custom name (<strong><?php echo v_wrap($rx_details['medication_name']); ?></strong>). You can link it to an existing inventory item below, or dispense it directly.
+                                                    </div>
+
                                                     <div class="form-group" style="margin-bottom:15px;">
-                                                        <label>Pharmacist Remarks</label>
-                                                        <textarea name="remarks" rows="2" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ddd;"></textarea>
+                                                        <label style="font-weight:600; color:#333;">Link to Pharmacy Inventory (Optional):</label>
+                                                        <select name="selected_inventory_id" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd; font-size:0.95rem;">
+                                                            <option value="">-- Manual Dispensing / External (No Stock Deduction) --</option>
+                                                            <?php 
+                                                            $all_inv_items = get_all_inventory();
+                                                            if ($all_inv_items) {
+                                                                while($inv_row = $all_inv_items->fetch_assoc()) { 
+                                                            ?>
+                                                                <option value="<?php echo $inv_row['id']; ?>">
+                                                                    <?php echo v_wrap($inv_row['drug_name'] . ' (' . $inv_row['stock_quantity'] . ' in stock)'); ?>
+                                                                </option>
+                                                            <?php 
+                                                                } 
+                                                            } 
+                                                            ?>
+                                                        </select>
                                                     </div>
-                                                    <button type="submit" class="btn btn-primary" style="background:#1bc03d; color:white; border:none; padding:10px; border-radius:5px; width:100%;">
-                                                        <i class="bi bi-check-circle"></i> Dispense Medication
-                                                    </button>
-                                                </form>
-                                            <?php } else { ?>
-                                                <div style="background:#f8d7da; color:#721c24; padding:15px; border-radius:8px;">
-                                                    <strong>Error:</strong> This prescription was not selected from the official pharmacy inventory. You cannot auto-dispense it.
+
+                                                    <div class="form-group" style="margin-bottom:15px;">
+                                                        <label>Quantity to Dispense *</label>
+                                                        <input type="number" name="quantity" required min="1" value="1" style="width:100%; padding:8px; border-radius:5px; border:1px solid #ddd;">
+                                                    </div>
+                                                <?php } ?>
+
+                                                <div class="form-group" style="margin-bottom:15px;">
+                                                    <label>Pharmacist Remarks</label>
+                                                    <textarea name="remarks" rows="2" placeholder="e.g. Dispensed with counselling, dosage explained..." style="width:100%; padding:8px; border-radius:5px; border:1px solid #ddd;"></textarea>
                                                 </div>
-                                            <?php } ?>
+
+                                                <button type="submit" class="btn btn-primary" style="background:#1bc03d; color:white; border:none; padding:10px; border-radius:5px; width:100%;">
+                                                    <i class="bi bi-check-circle"></i> Dispense Medication
+                                                </button>
+                                            </form>
                                         <?php } ?>
                                     </div>
                                 </div>
