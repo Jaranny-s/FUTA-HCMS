@@ -42,6 +42,9 @@ if (is_post_request()) {
         if (!empty($patient['profile_image'])) {
             update_patient_profile_image($id, $patient['profile_image']);
         }
+        if (!empty($patient['status']) && $patient['status'] === 'Active') {
+            $db_1->query("UPDATE patients SET inactive_sessions_count = 0 WHERE id = " . (int)$id);
+        }
         $_SESSION['message'] = "Patient updated successfully!";
         redirect_to(url_wrap('/modules/patients/index.php'));
     } else {

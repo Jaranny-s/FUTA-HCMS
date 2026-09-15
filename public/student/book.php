@@ -4,6 +4,12 @@ require_student_login();
 
 $student = find_student_by_matric($_SESSION['student_matric']);
 
+if (!$student || ($student['status'] ?? 'Active') !== 'Active') {
+    $_SESSION['message'] = "Error: Your student account is currently " . htmlspecialchars($student['status'] ?? 'Inactive') . ". Only active enrolled students can request subsidized campus appointments. If you need medical care, please visit the Health Centre reception.";
+    redirect_to(url_wrap('/student/dashboard.php'));
+    exit;
+}
+
 if (is_post_request()) {
     $date = $_POST['date'] ?? '';
     $time = $_POST['time'] ?? '';

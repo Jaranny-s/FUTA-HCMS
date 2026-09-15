@@ -305,11 +305,13 @@ $isIncomplete = empty($student['gender'])
                         <div class="form-row-3">
                             <div class="form-group">
                                 <label>School / Faculty</label>
-                                <input type="text" name="faculty" value="<?php echo v_wrap($student['faculty'] ?? ''); ?>" placeholder="e.g. Computing / SEET">
+                                <input type="text" name="faculty" id="student_faculty" value="<?php echo v_wrap($student['faculty'] ?? ''); ?>" placeholder="Auto-selected from department" readonly style="background:#f8f9fa;">
                             </div>
                             <div class="form-group">
                                 <label>Department *</label>
-                                <input type="text" name="department" value="<?php echo v_wrap($student['department'] ?? ''); ?>" placeholder="e.g. Computer Science" required>
+                                <select name="department" id="student_department" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                    <?php echo render_futa_department_options($student['department'] ?? ''); ?>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label>Level</label>
@@ -320,6 +322,7 @@ $isIncomplete = empty($student['gender'])
                                     <option value="300" <?php echo ($student['level'] ?? '') === '300' ? 'selected' : ''; ?>>300 Level</option>
                                     <option value="400" <?php echo ($student['level'] ?? '') === '400' ? 'selected' : ''; ?>>400 Level</option>
                                     <option value="500" <?php echo ($student['level'] ?? '') === '500' ? 'selected' : ''; ?>>500 Level</option>
+                                    <option value="600" <?php echo ($student['level'] ?? '') === '600' ? 'selected' : ''; ?>>600 Level (MBBS)</option>
                                     <option value="Postgraduate" <?php echo ($student['level'] ?? '') === 'Postgraduate' ? 'selected' : ''; ?>>Postgraduate</option>
                                 </select>
                             </div>
@@ -545,6 +548,23 @@ $isIncomplete = empty($student['gender'])
                 if (emRel) emRel.value = nokRel;
                 if (emPhone) emPhone.value = nokPhone;
             });
+        }
+
+        const deptSelect = document.getElementById('student_department');
+        const facultyInput = document.getElementById('student_faculty');
+        if (deptSelect && facultyInput) {
+            deptSelect.addEventListener('change', function() {
+                const opt = deptSelect.options[deptSelect.selectedIndex];
+                const fac = opt.getAttribute('data-faculty') || '';
+                if (fac) {
+                    facultyInput.value = fac;
+                }
+            });
+            if (deptSelect.value && !facultyInput.value) {
+                const opt = deptSelect.options[deptSelect.selectedIndex];
+                const fac = opt.getAttribute('data-faculty') || '';
+                if (fac) facultyInput.value = fac;
+            }
         }
     });
     </script>

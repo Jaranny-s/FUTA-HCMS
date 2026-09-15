@@ -24,9 +24,13 @@ $offset = ($page - 1) * $limit;
 
 if ($page < 1) {
 	$page = 1;
-	}
+}
 
-$totalPages = total_page_count_for_patients($limit);
+$tab = $_GET['tab'] ?? 'active';
+$isArchivedTab = ($tab === 'archived');
+$statusFilter = $isArchivedTab ? 'Archived' : null;
+
+$totalPages = total_page_count_for_patients($limit, $statusFilter);
 
 $search = $_GET['search'] ?? null;
 $startDate = $_GET['start'] ?? null;
@@ -34,8 +38,9 @@ $endDate = $_GET['end'] ?? null;
 $onlyStudent = isset($_GET['Student']);
 $onlyStaff = isset($_GET['Staff']);
 
-$all_patients = find_all_patients($search, $startDate, $endDate, $onlyStudent, $onlyStaff, $limit, $offset);
+$all_patients = find_all_patients($search, $startDate, $endDate, $onlyStudent, $onlyStaff, $limit, $offset, $statusFilter);
 
+require_once(PRIVATE_PATH . '/data/futa_departments.php');
 
 include(SHARED_PATH . '/header.php'); ?>
 
@@ -49,8 +54,8 @@ include(SHARED_PATH . '/header.php'); ?>
 </a>
     
   <div class="top">
-    <p class="top-head">Patient Records </p> 
-    <p class="top-description">list of all registered patients</p>
+    <p class="top-head"><?php echo $isArchivedTab ? 'Archived Patient Records' : 'Patient Records'; ?></p> 
+    <p class="top-description"><?php echo $isArchivedTab ? 'Cold-storage archive for patients inactive for 5+ years or permanently archived. Clinical histories are preserved.' : 'List of all active and registered patients.'; ?></p>
   </div>
    
   
@@ -93,6 +98,22 @@ $canManagePatients = in_array($_SESSION['staff_role'] ?? '', ['receptionist', 'a
             <div class="modal-step" data-step="1">
                 <h4 style="margin-top:0; color:#0F4E74;">Step 1: Basic Information</h4>
                 <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
+                
+                <!-- Duplicate / Former Patient Detection Alert -->
+                <div id="regDuplicatePatientAlert" style="display:none; background:#fff8e1; border:1px solid #ffe082; padding:14px 16px; border-radius:8px; margin-bottom:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+                    <div style="font-weight:600; color:#b78103; display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:0.95rem;">
+                        <i class="bi bi-person-exclamation" style="font-size:1.25rem;"></i> Matching Historical Patient Record Found
+                    </div>
+                    <div id="regDuplicateDetails" style="font-size:0.88rem; color:#444; line-height:1.5;"></div>
+                    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" id="btnTransitionExisting" class="btn" style="background:#0F4E74; color:white; border:none; padding:8px 16px; border-radius:5px; font-size:0.85rem; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                            <i class="bi bi-arrow-repeat"></i> Transition & Reactivate Existing Record
+                        </button>
+                        <button type="button" id="btnDismissDuplicate" class="btn" style="background:#e0e0e0; color:#333; border:none; padding:8px 14px; border-radius:5px; font-size:0.85rem; cursor:pointer;">
+                            Dismiss & Register as New
+                        </button>
+                    </div>
+                </div>
                 
                 <div class="form-group" style="margin-bottom: 12px;">
                     <label style="font-weight:600;">Patient Category *</label>
@@ -343,21 +364,24 @@ $canManagePatients = in_array($_SESSION['staff_role'] ?? '', ['receptionist', 'a
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                         <div>
                             <label>School / Faculty</label>
-                            <input type="text" name="faculty" placeholder="e.g. Computing / SEET" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                            <input type="text" name="faculty" placeholder="Auto-fills from department" readonly style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px; background:#f9fbfd;">
                         </div>
                         <div>
                             <label>Department</label>
-                            <input type="text" name="department" placeholder="e.g. Computer Science" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                            <select name="department" class="futa-dept-select" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                                <?php echo render_futa_department_options(); ?>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label>Level</label>
                         <select name="level" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
-                            <option value="100L">100 Level</option>
-                            <option value="200L">200 Level</option>
-                            <option value="300L">300 Level</option>
-                            <option value="400L">400 Level</option>
-                            <option value="500L">500 Level</option>
+                            <option value="100">100 Level</option>
+                            <option value="200">200 Level</option>
+                            <option value="300">300 Level</option>
+                            <option value="400">400 Level</option>
+                            <option value="500">500 Level</option>
+                            <option value="600">600 Level (MBBS)</option>
                             <option value="Postgraduate">Postgraduate</option>
                         </select>
                     </div>
@@ -466,14 +490,27 @@ $canManagePatients = in_array($_SESSION['staff_role'] ?? '', ['receptionist', 'a
                 <h4 style="margin-top:0; color:#0F4E74;">Step 1: Basic Information</h4>
                 <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
                 
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="font-weight:600;">Patient Category *</label>
-                    <select name="patient_category" class="category-select" required style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
-                        <option value="Student">Student</option>
-                        <option value="Staff">Staff</option>
-                        <option value="Dependant">Dependant</option>
-                        <option value="External">External</option>
-                    </select>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="font-weight:600;">Patient Category *</label>
+                        <select name="patient_category" class="category-select" required style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="Student">Student</option>
+                            <option value="Staff">Staff</option>
+                            <option value="Dependant">Dependant</option>
+                            <option value="External">External</option>
+                        </select>
+                    </div>
+                    <?php if ($canManagePatients) { ?>
+                    <div>
+                        <label style="font-weight:600;">Patient Status *</label>
+                        <select name="status" class="status-select" required style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Archived">Archived</option>
+                            <option value="Deceased">Deceased</option>
+                        </select>
+                    </div>
+                    <?php } ?>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
@@ -715,21 +752,24 @@ $canManagePatients = in_array($_SESSION['staff_role'] ?? '', ['receptionist', 'a
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                         <div>
                             <label>School / Faculty</label>
-                            <input type="text" name="faculty" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                            <input type="text" name="faculty" readonly style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px; background:#f9fbfd;">
                         </div>
                         <div>
                             <label>Department</label>
-                            <input type="text" name="department" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                            <select name="department" class="futa-dept-select" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
+                                <?php echo render_futa_department_options(); ?>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label>Level</label>
                         <select name="level" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:5px;">
-                            <option value="100L">100 Level</option>
-                            <option value="200L">200 Level</option>
-                            <option value="300L">300 Level</option>
-                            <option value="400L">400 Level</option>
-                            <option value="500L">500 Level</option>
+                            <option value="100">100 Level</option>
+                            <option value="200">200 Level</option>
+                            <option value="300">300 Level</option>
+                            <option value="400">400 Level</option>
+                            <option value="500">500 Level</option>
+                            <option value="600">600 Level (MBBS)</option>
                             <option value="Postgraduate">Postgraduate</option>
                         </select>
                     </div>
@@ -896,6 +936,17 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         if (stateSelect) {
             stateSelect.addEventListener('change', function() { populateLGAs(this.value); });
+        }
+
+        // Auto-fill Faculty from Department
+        const deptSelect = form.querySelector('.futa-dept-select');
+        const facultyInput = form.querySelector('[name="faculty"]');
+        if (deptSelect && facultyInput) {
+            deptSelect.addEventListener('change', function() {
+                const opt = deptSelect.options[deptSelect.selectedIndex];
+                const fac = opt ? (opt.getAttribute('data-faculty') || '') : '';
+                if (fac) facultyInput.value = fac;
+            });
         }
 
         // Dynamic Category Switching for Step 5
@@ -1190,7 +1241,99 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 2. Edit Patient Data Population
+    // 2. Edit Patient Data Population Function
+    function populateEditPatientData(modal, data) {
+        const form = modal.querySelector('form');
+        if (!form || !data) return;
+
+        if (data.id) document.getElementById('edit_patient_id').value = data.id;
+        if (data.status && form.querySelector('[name="status"]')) {
+            form.querySelector('[name="status"]').value = data.status;
+        }
+        if (data.surname) form.querySelector('[name="surname"]').value = data.surname;
+        if (data.first_name) form.querySelector('[name="first_name"]').value = data.first_name;
+        if (data.middle_name) form.querySelector('[name="middle_name"]').value = data.middle_name;
+        if (data.gender) form.querySelector('[name="gender"]').value = data.gender;
+        if (data.date_of_birth) {
+            const dobF = form.querySelector('[name="date_of_birth"]');
+            dobF.value = data.date_of_birth;
+            dobF.dispatchEvent(new Event('change'));
+        }
+        if (data.marital_status) form.querySelector('[name="marital_status"]').value = data.marital_status;
+
+        // Contact
+        if (data.phone) form.querySelector('[name="phone"]').value = data.phone;
+        if (data.alternate_phone) form.querySelector('[name="alternate_phone"]').value = data.alternate_phone;
+        if (data.email) form.querySelector('[name="email"]').value = data.email;
+        if (data.address) form.querySelector('[name="address"]').value = data.address;
+        if (data.city) form.querySelector('[name="city"]').value = data.city;
+        if (data.residential_state) form.querySelector('[name="residential_state"]').value = data.residential_state;
+
+        // Emergency & Next of Kin
+        if (data.emergency_contact_name) form.querySelector('[name="emergency_contact_name"]').value = data.emergency_contact_name;
+        if (data.emergency_contact_phone) form.querySelector('[name="emergency_contact_phone"]').value = data.emergency_contact_phone;
+        if (data.emergency_contact_relationship) form.querySelector('[name="emergency_contact_relationship"]').value = data.emergency_contact_relationship;
+
+        if (data.next_of_kin_name) form.querySelector('[name="next_of_kin_name"]').value = data.next_of_kin_name;
+        if (data.next_of_kin_phone) form.querySelector('[name="next_of_kin_phone"]').value = data.next_of_kin_phone;
+        if (data.next_of_kin_relationship) form.querySelector('[name="next_of_kin_relationship"]').value = data.next_of_kin_relationship;
+
+        // Medical
+        if (data.blood_group) form.querySelector('[name="blood_group"]').value = data.blood_group;
+        if (data.genotype) form.querySelector('[name="genotype"]').value = data.genotype;
+        if (data.allergies) form.querySelector('[name="allergies"]').value = data.allergies;
+        if (data.chronic_conditions) form.querySelector('[name="chronic_conditions"]').value = data.chronic_conditions;
+        if (data.disabilities) form.querySelector('[name="disabilities"]').value = data.disabilities;
+
+        // Category-specific fields
+        if (data.matric_number) form.querySelector('[name="matric_number"]').value = data.matric_number;
+        if (data.department) {
+            const deptField = form.querySelector('[name="department"]');
+            if (deptField) {
+                deptField.value = data.department;
+                deptField.dispatchEvent(new Event('change'));
+            }
+        }
+        if (data.faculty) form.querySelector('[name="faculty"]').value = data.faculty;
+        if (data.level) {
+            const cleanLvl = data.level.replace(/[^0-9]/g, '');
+            const lvlSelect = form.querySelector('[name="level"]');
+            if (lvlSelect) {
+                if (lvlSelect.querySelector(`option[value="${cleanLvl}"]`)) {
+                    lvlSelect.value = cleanLvl;
+                } else {
+                    lvlSelect.value = data.level;
+                }
+            }
+        }
+
+        if (data.staff_number) form.querySelector('[name="staff_number"]').value = data.staff_number;
+        if (data.department) form.querySelector('[name="staff_department"]').value = data.department;
+        if (data.staff_position) form.querySelector('[name="staff_position"]').value = data.staff_position;
+
+        if (data.relationship_to_principal) form.querySelector('[name="relationship_to_principal"]').value = data.relationship_to_principal;
+        if (data.principal_display && modal.setPrincipal) {
+            modal.setPrincipal(data.principal_display);
+        } else if (data.principal_patient_id) {
+            modal.querySelector('.principal-patient-id-input').value = data.principal_patient_id;
+        } else if (modal.clearPrincipal) {
+            modal.clearPrincipal();
+        }
+
+        if (data.occupation) form.querySelector('[name="occupation"]').value = data.occupation;
+        if (data.employer) form.querySelector('[name="employer"]').value = data.employer;
+
+        // Initialize Country, State, LGA & Category dynamic display
+        const cat = data.patient_category || 'Student';
+        const nat = data.nationality || 'Nigeria';
+        const st = data.state_of_origin || '';
+        const lga = data.lga || '';
+        if (modal.updateCountryAndCategory) {
+            modal.updateCountryAndCategory(cat, nat, st, lga);
+        }
+    }
+
+    // Bind Edit Buttons on Table
     document.querySelectorAll('.edit-patient').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -1199,16 +1342,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const form = document.getElementById('editPatientForm');
             if (!modal || !form) return;
 
-            // Reset modal to Step 1 & Clear previous patient values immediately (prevents data bleed)
             if (modal.resetToStepOne) modal.resetToStepOne();
             if (modal.clearPrincipal) modal.clearPrincipal();
             form.reset();
             document.getElementById('edit_patient_id').value = '';
 
-            // Open modal
             modal.classList.add('active');
 
-            // Fetch complete patient data
             fetch("<?php echo url_wrap('/modules/ajax/get_patient.php'); ?>?id=" + patientId)
                 .then(response => {
                     if (!response.ok) throw new Error('HTTP error ' + response.status);
@@ -1219,74 +1359,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         alert(data.error);
                         return;
                     }
-
-                    // Populate form fields
-                    if (data.id) document.getElementById('edit_patient_id').value = data.id;
-                    if (data.surname) form.querySelector('[name="surname"]').value = data.surname;
-                    if (data.first_name) form.querySelector('[name="first_name"]').value = data.first_name;
-                    if (data.middle_name) form.querySelector('[name="middle_name"]').value = data.middle_name;
-                    if (data.gender) form.querySelector('[name="gender"]').value = data.gender;
-                    if (data.date_of_birth) {
-                        const dobF = form.querySelector('[name="date_of_birth"]');
-                        dobF.value = data.date_of_birth;
-                        dobF.dispatchEvent(new Event('change'));
-                    }
-                    if (data.marital_status) form.querySelector('[name="marital_status"]').value = data.marital_status;
-
-                    // Contact
-                    if (data.phone) form.querySelector('[name="phone"]').value = data.phone;
-                    if (data.alternate_phone) form.querySelector('[name="alternate_phone"]').value = data.alternate_phone;
-                    if (data.email) form.querySelector('[name="email"]').value = data.email;
-                    if (data.address) form.querySelector('[name="address"]').value = data.address;
-                    if (data.city) form.querySelector('[name="city"]').value = data.city;
-                    if (data.residential_state) form.querySelector('[name="residential_state"]').value = data.residential_state;
-
-                    // Emergency & Next of Kin
-                    if (data.emergency_contact_name) form.querySelector('[name="emergency_contact_name"]').value = data.emergency_contact_name;
-                    if (data.emergency_contact_phone) form.querySelector('[name="emergency_contact_phone"]').value = data.emergency_contact_phone;
-                    if (data.emergency_contact_relationship) form.querySelector('[name="emergency_contact_relationship"]').value = data.emergency_contact_relationship;
-
-                    if (data.next_of_kin_name) form.querySelector('[name="next_of_kin_name"]').value = data.next_of_kin_name;
-                    if (data.next_of_kin_phone) form.querySelector('[name="next_of_kin_phone"]').value = data.next_of_kin_phone;
-                    if (data.next_of_kin_relationship) form.querySelector('[name="next_of_kin_relationship"]').value = data.next_of_kin_relationship;
-
-                    // Medical
-                    if (data.blood_group) form.querySelector('[name="blood_group"]').value = data.blood_group;
-                    if (data.genotype) form.querySelector('[name="genotype"]').value = data.genotype;
-                    if (data.allergies) form.querySelector('[name="allergies"]').value = data.allergies;
-                    if (data.chronic_conditions) form.querySelector('[name="chronic_conditions"]').value = data.chronic_conditions;
-                    if (data.disabilities) form.querySelector('[name="disabilities"]').value = data.disabilities;
-
-                    // Category-specific fields
-                    if (data.matric_number) form.querySelector('[name="matric_number"]').value = data.matric_number;
-                    if (data.faculty) form.querySelector('[name="faculty"]').value = data.faculty;
-                    if (data.department) form.querySelector('[name="department"]').value = data.department;
-                    if (data.level) form.querySelector('[name="level"]').value = data.level;
-
-                    if (data.staff_number) form.querySelector('[name="staff_number"]').value = data.staff_number;
-                    if (data.department) form.querySelector('[name="staff_department"]').value = data.department;
-                    if (data.staff_position) form.querySelector('[name="staff_position"]').value = data.staff_position;
-
-                    if (data.relationship_to_principal) form.querySelector('[name="relationship_to_principal"]').value = data.relationship_to_principal;
-                    if (data.principal_display && modal.setPrincipal) {
-                        modal.setPrincipal(data.principal_display);
-                    } else if (data.principal_patient_id) {
-                        modal.querySelector('.principal-patient-id-input').value = data.principal_patient_id;
-                    } else if (modal.clearPrincipal) {
-                        modal.clearPrincipal();
-                    }
-
-                    if (data.occupation) form.querySelector('[name="occupation"]').value = data.occupation;
-                    if (data.employer) form.querySelector('[name="employer"]').value = data.employer;
-
-                    // Initialize Country, State, LGA & Category dynamic display
-                    const cat = data.patient_category || 'Student';
-                    const nat = data.nationality || 'Nigeria';
-                    const st = data.state_of_origin || '';
-                    const lga = data.lga || '';
-                    if (modal.updateCountryAndCategory) {
-                        modal.updateCountryAndCategory(cat, nat, st, lga);
-                    }
+                    populateEditPatientData(modal, data);
                 })
                 .catch(err => {
                     console.error('Error loading patient data:', err);
@@ -1294,23 +1367,128 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
         });
     });
+
+    // 3. Real-time Duplicate / Former Patient Detection on Registration
+    const regModalEl = document.getElementById('registerPatientModal');
+    if (regModalEl) {
+        const regForm = regModalEl.querySelector('form');
+        const dupAlert = document.getElementById('regDuplicatePatientAlert');
+        const dupDetails = document.getElementById('regDuplicateDetails');
+        const btnTransition = document.getElementById('btnTransitionExisting');
+        const btnDismiss = document.getElementById('btnDismissDuplicate');
+        let detectedPatientId = null;
+
+        function runDuplicateCheck() {
+            if (!regForm) return;
+            const matric = regForm.querySelector('[name="matric_number"]')?.value.trim() || '';
+            const phone = regForm.querySelector('[name="phone"]')?.value.trim() || '';
+            const email = regForm.querySelector('[name="email"]')?.value.trim() || '';
+            const surname = regForm.querySelector('[name="surname"]')?.value.trim() || '';
+            const first = regForm.querySelector('[name="first_name"]')?.value.trim() || '';
+            const dob = regForm.querySelector('[name="date_of_birth"]')?.value.trim() || '';
+
+            if (!matric && !phone && !email && (!surname || !first || !dob)) {
+                return;
+            }
+
+            const params = new URLSearchParams();
+            if (matric) params.append('matric_number', matric);
+            if (phone) params.append('phone', phone);
+            if (email) params.append('email', email);
+            if (surname) params.append('surname', surname);
+            if (first) params.append('first_name', first);
+            if (dob) params.append('date_of_birth', dob);
+
+            fetch("<?php echo url_wrap('/modules/patients/check_duplicate_patient.php'); ?>?" + params.toString())
+                .then(res => res.json())
+                .then(data => {
+                    if (data.found && data.patient) {
+                        detectedPatientId = data.patient.id;
+                        if (dupAlert && dupDetails) {
+                            dupDetails.innerHTML = `<strong>${data.patient.full_name}</strong> (${data.patient.patient_id}) was previously registered as a <strong>${data.patient.patient_category}</strong> (Status: <strong>${data.patient.status}</strong>, Dept: ${data.patient.department || 'N/A'}, Registered: ${data.patient.registered_date}).<br><span style="color:#0F4E74; font-size:0.83rem;">Matched by: ${data.reason}</span>`;
+                            dupAlert.style.display = 'block';
+                        }
+                    } else {
+                        if (dupAlert) dupAlert.style.display = 'none';
+                        detectedPatientId = null;
+                    }
+                })
+                .catch(err => console.error('Duplicate check error:', err));
+        }
+
+        ['matric_number', 'phone', 'email', 'surname', 'first_name', 'date_of_birth'].forEach(fieldName => {
+            const el = regForm.querySelector(`[name="${fieldName}"]`);
+            if (el) {
+                el.addEventListener('blur', runDuplicateCheck);
+                el.addEventListener('change', runDuplicateCheck);
+            }
+        });
+
+        if (btnDismiss) {
+            btnDismiss.addEventListener('click', function() {
+                if (dupAlert) dupAlert.style.display = 'none';
+            });
+        }
+
+        if (btnTransition) {
+            btnTransition.addEventListener('click', function() {
+                if (!detectedPatientId) return;
+                regModalEl.classList.remove('active');
+                if (dupAlert) dupAlert.style.display = 'none';
+
+                const editModal = document.getElementById('editPatientModal');
+                if (editModal) {
+                    editModal.classList.add('active');
+                    if (editModal.resetToStepOne) editModal.resetToStepOne();
+                    if (editModal.clearPrincipal) editModal.clearPrincipal();
+
+                    fetch("<?php echo url_wrap('/modules/ajax/get_patient.php'); ?>?id=" + detectedPatientId)
+                        .then(res => res.json())
+                        .then(pdata => {
+                            if (pdata && !pdata.error) {
+                                populateEditPatientData(editModal, pdata);
+                                // Ensure status is defaulted to Active for reactivating
+                                const statusSelect = editModal.querySelector('[name="status"]');
+                                if (statusSelect) statusSelect.value = 'Active';
+                            }
+                        })
+                        .catch(err => console.error(err));
+                }
+            });
+        }
+    }
 });
 </script>
 
 <?php } ?>
     
   <div class="tabs" role="tablist">
-  <button role="tab" class="tab-btn active" aria-selected="true" aria-controls="patient" data-tab="patient">
-    All Patients
-  </button>
-  <button role="tab" class="tab-btn" aria-selected="false" aria-controls="patient-statistics" data-tab="patient-statistics">
-    Patient Statistics
-  </button>
+    <a href="<?php echo url_wrap('/modules/patients/index.php'); ?>" class="tab-btn <?php if(!$isArchivedTab) echo 'active'; ?>" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+      <i class="bi bi-people"></i> Active Patients
+    </a>
+    <?php if ($canManagePatients) { ?>
+    <a href="<?php echo url_wrap('/modules/patients/index.php?tab=archived'); ?>" class="tab-btn <?php if($isArchivedTab) echo 'active'; ?>" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+      <i class="bi bi-archive"></i> Archived Records
+      <?php 
+      $archCountRes = $db_1->query("SELECT COUNT(*) as c FROM patients WHERE status = 'Archived'");
+      $archCount = (int)($archCountRes->fetch_assoc()['c'] ?? 0);
+      if ($archCount > 0) {
+          echo "<span class='badge' style='background:#6c757d; color:white; font-size:0.75rem; padding:2px 7px; border-radius:10px;'>{$archCount}</span>";
+      }
+      ?>
+    </a>
+    <?php } ?>
+    <button role="tab" class="tab-btn" aria-selected="false" aria-controls="patient-statistics" data-tab="patient-statistics">
+      <i class="bi bi-graph-up"></i> Patient Statistics
+    </button>
   </div>
     
-     <div id="patient" class="tab-content active" role="tabpanel" aria-labelledby="patient-tab">
+  <div id="patient" class="tab-content active" role="tabpanel" aria-labelledby="patient-tab">
        
      <form method="GET" style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
+     <?php if ($isArchivedTab) { ?>
+       <input type="hidden" name="tab" value="archived">
+     <?php } ?>
 	
 	<div>
 	
@@ -1360,6 +1538,14 @@ document.addEventListener("DOMContentLoaded", function() {
         
   	  </tr>
       
+      <?php if ($all_patients->num_rows === 0) { ?>
+        <tr>
+          <td colspan="11" style="text-align: center; padding: 40px 20px; color: #888;">
+            <i class="bi bi-folder-x" style="font-size: 2.2rem; display: block; margin-bottom: 8px; color: #aaa;"></i>
+            No <?php echo $isArchivedTab ? 'archived' : 'matching'; ?> patient records found.
+          </td>
+        </tr>
+      <?php } ?>
       
       <?php while($patient = $all_patients->fetch_assoc()) { ?>
         
@@ -1415,6 +1601,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <?php
 $queryString = http_build_query([
+  'tab' => $isArchivedTab ? 'archived' : null,
   'search' => $search,
   'start' => $startDate,
   'end' => $endDate,

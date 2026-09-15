@@ -515,13 +515,20 @@ function delete_staff($id) {
 }
 
 
-function find_all_patients($search = null, $startDate = null, $endDate = null, $onlyStudent = false, $onlyStaff= false, $limit = 20, $offset = 0) {
+function find_all_patients($search = null, $startDate = null, $endDate = null, $onlyStudent = false, $onlyStaff= false, $limit = 20, $offset = 0, $statusFilter = null) {
     global $db_1;
         
     $sql = "SELECT id, patient_id, surname, first_name, middle_name, gender, phone, email, patient_category, profile_image, status FROM patients ";
-    //$sql .= "ORDER BY created_at DESC ";
     
-   $conditions = [];
+    $conditions = [];
+
+    if ($statusFilter) {
+        $cleanStatus = $db_1->real_escape_string($statusFilter);
+        $conditions[] = "status = '$cleanStatus'";
+    } else {
+        // By default, exclude archived records from active daily clinic queues
+        $conditions[] = "status != 'Archived'";
+    }
 
     if ($onlyStudent) {
         $conditions[] = "patient_category = 'Student'";
@@ -535,9 +542,12 @@ function find_all_patients($search = null, $startDate = null, $endDate = null, $
     }
 
     if ($search) {
-        $conditions[] = "(surname LIKE '%$search%' 
-                         OR first_name LIKE '%$search%'  
-                         OR middle_name LIKE '%$search%')";
+        $safeSearch = $db_1->real_escape_string($search);
+        $conditions[] = "(surname LIKE '%$safeSearch%' 
+                         OR first_name LIKE '%$safeSearch%'  
+                         OR middle_name LIKE '%$safeSearch%'
+                         OR matric_number LIKE '%$safeSearch%'
+                         OR patient_id LIKE '%$safeSearch%')";
     }
 
     if (!empty($conditions)) {
@@ -553,7 +563,6 @@ function find_all_patients($search = null, $startDate = null, $endDate = null, $
     
     $query->execute();
     
-    
     $result = $query->get_result();
     confirm_result_set($result);
     $query->close();
@@ -561,15 +570,18 @@ function find_all_patients($search = null, $startDate = null, $endDate = null, $
     return $result;
 }
 
-function total_page_count_for_patients($limit) {
+function total_page_count_for_patients($limit, $statusFilter = null) {
 	global $db_1;
 	
-	$totalQuery = "SELECT COUNT(*) as total ";
-	$totalQuery .= "FROM patients";
+	$totalQuery = "SELECT COUNT(*) as total FROM patients ";
+    if ($statusFilter) {
+        $cleanStatus = $db_1->real_escape_string($statusFilter);
+        $totalQuery .= "WHERE status = '$cleanStatus'";
+    } else {
+        $totalQuery .= "WHERE status != 'Archived'";
+    }
 	
-
 	$totalResult = $db_1->query($totalQuery);
-	
 	$totalRows = $totalResult->fetch_assoc()['total'];
 
 	return ceil($totalRows / $limit);

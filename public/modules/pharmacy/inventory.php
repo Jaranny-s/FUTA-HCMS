@@ -26,6 +26,27 @@ if (isset($_GET['download_template']) && $_GET['download_template'] == '1') {
     exit;
 }
 
+if (isset($_GET['export_inventory']) && $_GET['export_inventory'] == '1') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="futa_pharmacy_current_inventory_' . date('Y_m_d') . '.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['id', 'drug_name', 'category', 'unit_price', 'stock_quantity']);
+    $all_inv = get_all_inventory();
+    while ($row = $all_inv->fetch_assoc()) {
+        fputcsv($output, [
+            $row['id'],
+            $row['drug_name'],
+            $row['category'],
+            number_format((float)$row['unit_price'], 2, '.', ''),
+            $row['stock_quantity']
+        ]);
+    }
+    fclose($output);
+    exit;
+}
+
 if (is_post_request()) {
     $action = $_POST['action'] ?? '';
     
@@ -35,6 +56,20 @@ if (is_post_request()) {
     } elseif ($action === 'add_stock') {
         update_inventory_stock($_POST['inventory_id'], $_POST['stock_change']);
         $_SESSION['message'] = "Stock updated.";
+    } elseif ($action === 'edit_drug') {
+        $edit_id = (int)($_POST['inventory_id'] ?? 0);
+        $edit_name = trim($_POST['drug_name'] ?? '');
+        $edit_cat = trim($_POST['category'] ?? 'Tablet');
+        $edit_price = (float)($_POST['unit_price'] ?? 0);
+        if ($edit_id > 0 && !empty($edit_name)) {
+            $up_stmt = $db_1->prepare("UPDATE pharmacy_inventory SET drug_name = ?, category = ?, unit_price = ? WHERE id = ?");
+            $up_stmt->bind_param("ssdi", $edit_name, $edit_cat, $edit_price, $edit_id);
+            $up_stmt->execute();
+            $up_stmt->close();
+            $_SESSION['message'] = "Medication '{$edit_name}' pricing and details updated successfully.";
+        } else {
+            $_SESSION['error'] = "Invalid drug data provided.";
+        }
     } elseif ($action === 'import_csv') {
         if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
             $_SESSION['error'] = "File upload failed. Please choose a valid CSV file.";
@@ -80,17 +115,30 @@ if (is_post_request()) {
                             $price = isset($data['unitprice']) ? (float)$data['unitprice'] : (isset($data['price']) ? (float)$data['price'] : 0.0);
                             $qty = isset($data['stockquantity']) ? (int)$data['stockquantity'] : (isset($data['stock']) ? (int)$data['stock'] : (isset($data['quantity']) ? (int)$data['quantity'] : 0));
 
-                            // Check if drug already exists
-                            $check_stmt = $db_1->prepare("SELECT id, stock_quantity FROM pharmacy_inventory WHERE LOWER(drug_name) = LOWER(?) LIMIT 1");
-                            $check_stmt->bind_param("s", $name);
-                            $check_stmt->execute();
-                            $check_res = $check_stmt->get_result();
-                            $existing = $check_res->fetch_assoc();
-                            $check_stmt->close();
+                            // Check if drug already exists by ID (if exported) or by name
+                            $row_id = isset($data['id']) ? (int)$data['id'] : 0;
+                            $existing = null;
+                            if ($row_id > 0) {
+                                $check_stmt = $db_1->prepare("SELECT id, stock_quantity FROM pharmacy_inventory WHERE id = ? LIMIT 1");
+                                $check_stmt->bind_param("i", $row_id);
+                                $check_stmt->execute();
+                                $existing = $check_stmt->get_result()->fetch_assoc();
+                                $check_stmt->close();
+                            }
+                            if (!$existing) {
+                                $check_stmt = $db_1->prepare("SELECT id, stock_quantity FROM pharmacy_inventory WHERE LOWER(drug_name) = LOWER(?) LIMIT 1");
+                                $check_stmt->bind_param("s", $name);
+                                $check_stmt->execute();
+                                $existing = $check_stmt->get_result()->fetch_assoc();
+                                $check_stmt->close();
+                            }
 
                             if ($existing) {
                                 $item_id = (int)$existing['id'];
-                                if ($mode === 'overwrite') {
+                                if ($mode === 'price_only') {
+                                    $up_stmt = $db_1->prepare("UPDATE pharmacy_inventory SET unit_price = IF(? > 0, ?, unit_price), category = IF(? != '', ?, category) WHERE id = ?");
+                                    $up_stmt->bind_param("dsssi", $price, $price, $cat, $cat, $item_id);
+                                } elseif ($mode === 'overwrite') {
                                     $up_stmt = $db_1->prepare("UPDATE pharmacy_inventory SET stock_quantity = ?, unit_price = IF(? > 0, ?, unit_price), category = IF(? != '', ?, category) WHERE id = ?");
                                     $up_stmt->bind_param("idsssi", $qty, $price, $price, $cat, $cat, $item_id);
                                 } else {
@@ -143,6 +191,9 @@ include(SHARED_PATH . '/header.php');
             <div class="card" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: none; box-shadow: none; padding: 0; flex-wrap: wrap; gap: 10px;">
                 <h3 style="margin: 0;">Current Inventory</h3>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <a href="?export_inventory=1" class="btn" style="background:#17a2b8; color:white; border:none; padding:10px 15px; border-radius:5px; text-decoration:none; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-file-earmark-arrow-down-fill"></i> Export Current Inventory (CSV)
+                    </a>
                     <a href="?download_template=1" class="btn" style="background:#6c757d; color:white; border:none; padding:10px 15px; border-radius:5px; text-decoration:none; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px;">
                         <i class="bi bi-file-earmark-arrow-down"></i> CSV Template
                     </a>
@@ -163,9 +214,7 @@ include(SHARED_PATH . '/header.php');
                     
                     <div style="background: #e7f3ff; border: 1px solid #b6d4fe; color: #084298; padding: 12px 15px; border-radius: 6px; font-size: 0.88rem; margin-bottom: 18px;">
                         <strong>Expected CSV Columns:</strong> <code>drug_name, category, unit_price, stock_quantity</code><br>
-                        <a href="?download_template=1" style="color: #0F4E74; font-weight: 600; text-decoration: underline; margin-top: 6px; display: inline-block;">
-                            <i class="bi bi-download"></i> Download pre-formatted sample CSV template
-                        </a>
+                        <span style="font-size:0.82rem; color:#444;">Tip: Use <strong>"Export Current Inventory (CSV)"</strong> to download live data, update prices/stock in Excel, and upload back here!</span>
                     </div>
 
                     <form action="" method="post" enctype="multipart/form-data">
@@ -177,16 +226,21 @@ include(SHARED_PATH . '/header.php');
                         </div>
 
                         <div class="form-group" style="margin-bottom: 20px;">
-                            <label style="display:block; margin-bottom: 8px; font-weight: 500;">Restock Mode for Existing Drugs:</label>
+                            <label style="display:block; margin-bottom: 8px; font-weight: 500;">Import Mode for Existing Drugs:</label>
                             <label style="display:block; margin-bottom: 8px; cursor: pointer; font-size: 0.9rem;">
                                 <input type="radio" name="import_mode" value="restock" checked style="margin-right: 6px;">
                                 <strong>Add to current stock (Physical Restocking)</strong>
                                 <span style="display:block; color:#666; font-size:0.82rem; margin-left: 20px;">Increases existing stock counts by the number in your CSV.</span>
                             </label>
-                            <label style="display:block; cursor: pointer; font-size: 0.9rem;">
+                            <label style="display:block; margin-bottom: 8px; cursor: pointer; font-size: 0.9rem;">
                                 <input type="radio" name="import_mode" value="overwrite" style="margin-right: 6px;">
                                 <strong>Set exact stock count (Audit / Physical Count)</strong>
                                 <span style="display:block; color:#666; font-size:0.82rem; margin-left: 20px;">Replaces existing stock counts with the exact number in your CSV.</span>
+                            </label>
+                            <label style="display:block; cursor: pointer; font-size: 0.9rem;">
+                                <input type="radio" name="import_mode" value="price_only" style="margin-right: 6px;">
+                                <strong>Update Unit Prices only (Preserve stock counts)</strong>
+                                <span style="display:block; color:#666; font-size:0.82rem; margin-left: 20px;">Updates only unit prices of existing drugs from the CSV without changing stock.</span>
                             </label>
                             <small style="color: #0F4E74; display: block; margin-top: 10px; font-style: italic;">Note: Any medication not already in inventory will be automatically created as a new drug record.</small>
                         </div>
@@ -232,6 +286,39 @@ include(SHARED_PATH . '/header.php');
                     </form>
                 </div>
             </div>
+
+            <!-- Edit Drug Modal -->
+            <div id="editDrugModal" class="modal-overlay">
+                <div class="modal-content">
+                    <button class="modal-close" data-modal-close>&times;</button>
+                    <h3 class="modal-title"><i class="bi bi-pencil-square"></i> Edit Medication & Pricing</h3>
+                    <form action="" method="post">
+                        <input type="hidden" name="action" value="edit_drug">
+                        <input type="hidden" name="inventory_id" id="edit_inv_id">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Drug Name *</label>
+                            <input type="text" name="drug_name" id="edit_inv_name" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Category *</label>
+                            <select name="category" id="edit_inv_category" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="Tablet">Tablet</option>
+                                <option value="Capsule">Capsule</option>
+                                <option value="Syrup">Syrup</option>
+                                <option value="Injection">Injection</option>
+                                <option value="Ointment">Ointment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Unit Price (₦) *</label>
+                            <input type="number" step="0.01" name="unit_price" id="edit_inv_price" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        </div>
+                        <p style="color:#666; font-size:0.85rem; margin-top:5px;">Note: To adjust stock, use the stock update field on the inventory table.</p>
+                        <button type="submit" class="btn btn-primary" style="margin-top:15px; background:#0F4E74; color:white; border:none; padding:10px; border-radius:5px; width: 100%;">Save Changes</button>
+                    </form>
+                </div>
+            </div>
             
             <div class="card" style="grid-column: span 2;">
                 <h3>Current Inventory</h3>
@@ -243,6 +330,7 @@ include(SHARED_PATH . '/header.php');
                         <th>Unit Price</th>
                         <th>Stock Available</th>
                         <th>Update Stock</th>
+                        <th>Actions</th>
                     </tr>
                     <?php while($item = $inventory->fetch_assoc()) { ?>
                     <tr>
@@ -263,6 +351,17 @@ include(SHARED_PATH . '/header.php');
                                 <button type="submit" class="btn btn-primary" style="background:#0F4E74; color:white; border:none; border-radius:4px;">Update</button>
                             </form>
                         </td>
+                        <td>
+                            <button type="button" class="btn btn-edit-drug" 
+                                    data-modal-target="editDrugModal"
+                                    data-id="<?php echo $item['id']; ?>"
+                                    data-name="<?php echo htmlspecialchars($item['drug_name']); ?>"
+                                    data-category="<?php echo htmlspecialchars($item['category']); ?>"
+                                    data-price="<?php echo htmlspecialchars($item['unit_price']); ?>"
+                                    style="background:#0F4E74; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:0.85rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                <i class="bi bi-pencil-square"></i> Edit Price
+                            </button>
+                        </td>
                     </tr>
                     <?php } ?>
                 </table>
@@ -270,4 +369,18 @@ include(SHARED_PATH . '/header.php');
         </div>
     </main>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-edit-drug').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_inv_id').value = this.dataset.id;
+            document.getElementById('edit_inv_name').value = this.dataset.name;
+            document.getElementById('edit_inv_category').value = this.dataset.category;
+            document.getElementById('edit_inv_price').value = this.dataset.price;
+        });
+    });
+});
+</script>
+
 <?php include(SHARED_PATH . '/footer.php'); ?>

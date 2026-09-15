@@ -36,6 +36,7 @@ define("WWW_ROOT", $doc_root);
     require_once('student_auth.php');
     require_once('student_functions.php');
     require_once('billing_functions.php');
+    require_once('academic_session_functions.php');
     
 
     $db_1 = db_connect(); // opens the database connection

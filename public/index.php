@@ -15,8 +15,17 @@ if (is_post_request()) {
     } else {
         $student = find_student_by_matric($matric_number);
         if ($student && password_verify($password, $student['hashed_password'])) {
-            log_in_student($student);
-            redirect_to(url_wrap('/student/dashboard.php'));
+            $student_status = $student['status'] ?? 'Active';
+            if ($student_status === 'Inactive') {
+                $errors[] = "Your student account is currently marked as Inactive (e.g. Graduated, Left, or Completed Program). If you have graduated and wish to access health services at FUTA as an alumnus or external client, please visit the Health Centre Reception desk to update your registration.";
+            } elseif ($student_status === 'Archived') {
+                $errors[] = "Your student account has been Archived due to extended inactivity (5+ sessions). Please visit Health Centre Medical Records to reactivate your patient record.";
+            } elseif ($student_status === 'Deceased') {
+                $errors[] = "Log in was unsuccessful. Please contact the Health Centre administrator.";
+            } else {
+                log_in_student($student);
+                redirect_to(url_wrap('/student/dashboard.php'));
+            }
         } else {
             $errors[] = "Log in was unsuccessful. Please check your matric number and password.";
         }
