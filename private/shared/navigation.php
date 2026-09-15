@@ -7,8 +7,54 @@ $role = $_SESSION['staff_role'] ?? '';
     <div class="nav-brand" style="padding: 20px; color: white; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
         <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Staff Portal</h3>
     </div>
+
+    <?php 
+    if ($role === 'doctor' && isset($_SESSION['staff_id'])) {
+        $doctorDutyStatus = 'Available';
+        $docQ = $db_1->query("SELECT duty_status FROM staff WHERE id = " . (int)$_SESSION['staff_id'] . " LIMIT 1");
+        if ($docQ && $rowD = $docQ->fetch_assoc()) {
+            $doctorDutyStatus = $rowD['duty_status'] ?? 'Available';
+        }
+        $dutyDotColor = ($doctorDutyStatus === 'Available') ? '#22c55e' : (($doctorDutyStatus === 'In Consultation') ? '#38bdf8' : (($doctorDutyStatus === 'On Break') ? '#facc15' : '#94a3b8'));
+    ?>
+    <div style="padding: 10px 14px; margin: 12px 14px 0 14px; background: rgba(255,255,255,0.08); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
+        <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: #cbd5e1; margin-bottom: 5px; display: flex; align-items: center; gap: 5px;">
+            <i id="navDutyDot" class="bi bi-circle-fill" style="color: <?php echo $dutyDotColor; ?>; font-size: 0.65rem;"></i> Clinical Duty Status
+        </div>
+        <select id="doctorDutyStatusNav" onchange="updateNavDutyStatus(this.value)" style="width: 100%; padding: 6px 8px; border-radius: 5px; font-size: 0.8rem; font-weight: 600; background: #0F4E74; color: white; border: 1px solid rgba(255,255,255,0.25); cursor: pointer;">
+            <option value="Available" <?php if($doctorDutyStatus === 'Available') echo 'selected'; ?>>🟢 Available</option>
+            <option value="In Consultation" <?php if($doctorDutyStatus === 'In Consultation') echo 'selected'; ?>>🔵 In Consultation</option>
+            <option value="On Break" <?php if($doctorDutyStatus === 'On Break') echo 'selected'; ?>>🟡 On Break</option>
+            <option value="Off Duty" <?php if($doctorDutyStatus === 'Off Duty') echo 'selected'; ?>>⚪ Off Duty</option>
+        </select>
+    </div>
+    <script>
+    function updateNavDutyStatus(newStatus) {
+        const sel = document.getElementById('doctorDutyStatusNav');
+        const dot = document.getElementById('navDutyDot');
+        if (sel) sel.disabled = true;
+        const formData = new FormData();
+        formData.append('status', newStatus);
+        fetch('<?php echo url_wrap("/modules/ajax/update_duty_status.php"); ?>', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (sel) sel.disabled = false;
+            if (dot) {
+                if (newStatus === 'Available') dot.style.color = '#22c55e';
+                else if (newStatus === 'In Consultation') dot.style.color = '#38bdf8';
+                else if (newStatus === 'On Break') dot.style.color = '#facc15';
+                else dot.style.color = '#94a3b8';
+            }
+        })
+        .catch(() => { if (sel) sel.disabled = false; });
+    }
+    </script>
+    <?php } ?>
     
-    <nav class="nav-links" style="margin-top: 20px;">
+    <nav class="nav-links" style="margin-top: 15px;">
 
         <!-- Dashboard: shown to all -->
         <a href="<?php echo url_wrap('/staff/dashboard.php'); ?>" class="nav-item <?php if($current_script == 'dashboard.php' && strpos($dir_path, 'staff') !== false) echo 'active'; ?>">

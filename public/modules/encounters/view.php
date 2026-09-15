@@ -98,7 +98,40 @@ if (is_post_request()) {
             $_SESSION['error'] = "Cannot complete encounter yet: Vitals/Nursing notes, Consultation, and Diagnosis must all be recorded first.";
         } else {
             update_encounter_status($encounter_id, 'Completed');
+            if ($is_doctor && $current_staff_id) {
+                $check_other = $db_1->query("SELECT COUNT(*) as c FROM encounters WHERE doctor_id = {$current_staff_id} AND status = 'In Progress' AND id != {$encounter_id}");
+                if ($check_other && (int)$check_other->fetch_assoc()['c'] === 0) {
+                    $db_1->query("UPDATE staff SET duty_status = 'Available' WHERE id = " . (int)$current_staff_id);
+                }
+            }
             $_SESSION['message'] = "Encounter marked as Completed successfully.";
+        }
+    } elseif ($action === 'reassign_encounter') {
+        $target_doctor_id = (int)($_POST['target_doctor_id'] ?? 0);
+        $reason_cat = trim($_POST['reassign_reason'] ?? '');
+        $notes = trim($_POST['reassign_notes'] ?? '');
+        $full_reason = $reason_cat . (!empty($notes) ? " - " . $notes : "");
+
+        if ($target_doctor_id <= 0) {
+            $_SESSION['error'] = "Please select a target doctor for reassignment.";
+        } elseif (empty($full_reason)) {
+            $_SESSION['error'] = "Please select or provide a transfer reason.";
+        } else {
+            $ok = reassign_encounter($encounter_id, $target_doctor_id, $full_reason, $staff_id);
+            if ($ok) {
+                if ($is_doctor && $current_staff_id) {
+                    $check_other = $db_1->query("SELECT COUNT(*) as c FROM encounters WHERE doctor_id = {$current_staff_id} AND status = 'In Progress' AND id != {$encounter_id}");
+                    if ($check_other && (int)$check_other->fetch_assoc()['c'] === 0) {
+                        $db_1->query("UPDATE staff SET duty_status = 'Available' WHERE id = " . (int)$current_staff_id);
+                    }
+                }
+                $targetDoc = find_staff_by_id($target_doctor_id);
+                $docName = $targetDoc['full_name'] ?? 'Doctor';
+                $_SESSION['message'] = "Encounter successfully reassigned to Dr. {$docName}.";
+                redirect_to(url_wrap('/modules/encounters/index.php'));
+            } else {
+                $_SESSION['error'] = "Failed to reassign encounter.";
+            }
         }
     } elseif ($action === 'cancel_encounter') {
         $category = trim($_POST['cancel_category'] ?? '');
@@ -144,6 +177,12 @@ $has_diagnosis = ($diagnoses && $diagnoses->num_rows > 0);
 $can_complete_encounter = $has_vitals_nursing && $has_consultation && $has_diagnosis;
 $can_prescribe = (hasPermission('prescribe_medication') || in_array($current_role, ['doctor', 'super_admin'])) && $can_write_clinical;
 
+if ($is_doctor && $is_assigned_doctor && $is_encounter_active) {
+    $db_1->query("UPDATE staff SET duty_status = 'In Consultation' WHERE id = " . (int)$current_staff_id);
+}
+
+$doctor_workloads = ($is_encounter_active) ? get_doctors_workload_summary() : [];
+
 $page_title = 'Encounter Workspace - ' . $encounter['encounter_number'];
 $specificCss = '/assets/css/encounters.css';
 $specificJs = '/assets/js/encounters.js';
@@ -165,6 +204,22 @@ include(SHARED_PATH . '/header.php');
         </div>
 
         <div><?php echo display_session_message(); ?></div>
+
+        <?php if (!empty($encounter['transfer_reason'])): 
+            $fromDocName = 'Previous Doctor';
+            if (!empty($encounter['transferred_from'])) {
+                $fDoc = find_staff_by_id((int)$encounter['transferred_from']);
+                if ($fDoc) $fromDocName = 'Dr. ' . $fDoc['full_name'];
+            }
+        ?>
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-left:4px solid #0284c7; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+            <i class="bi bi-arrow-left-right" style="font-size:1.4rem; color:#0284c7;"></i>
+            <div>
+                <strong style="color:#0369a1;">Reassigned Clinical Encounter:</strong>
+                <span style="color:#334155; font-size:0.9rem;"> Transferred from <strong><?php echo htmlspecialchars($fromDocName); ?></strong>. Reason: <em><?php echo htmlspecialchars($encounter['transfer_reason']); ?></em></span>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if ($encounter['status'] === 'Cancelled'): ?>
         <div style="background:#fff2f2; border:1px solid #f5c2c7; border-left:5px solid #dc3545; border-radius:8px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:flex-start; gap:14px;">
@@ -212,16 +267,21 @@ include(SHARED_PATH . '/header.php');
                     <span class="badge status-<?php echo str_replace(' ', '-', strtolower($encounter['status'])); ?>">
                         Status: <?php echo v_wrap($encounter['status']); ?>
                     </span>
-                </div>
-                <?php if ($encounter['status'] !== 'Completed' && $can_write_clinical) { ?>
-                <div style="margin-top: 10px; text-align: right;">
-                    <?php if ($can_complete_encounter) { ?>
-                    <form action="<?php echo url_wrap("/modules/encounters/view.php?id={$encounter_id}"); ?>" method="post" style="display:inline-block;">
-                        <input type="hidden" name="action" value="complete_encounter">
-                        <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:9px 18px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.92rem; box-shadow:0 3px 6px rgba(27,192,61,0.25);">
-                            <i class="bi bi-check-circle-fill"></i> Complete Encounter
-                        </button>
-                    </form>
+                <div style="margin-top: 10px; text-align: right; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <?php if ($is_encounter_active && ($is_assigned_doctor || $is_privileged)) { ?>
+                    <button type="button" onclick="openReassignModal()" class="btn" style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 9px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-arrow-left-right"></i> Transfer / Reassign
+                    </button>
+                    <?php } ?>
+
+                    <?php if ($encounter['status'] !== 'Completed' && $can_write_clinical) { ?>
+                        <?php if ($can_complete_encounter) { ?>
+                        <form action="<?php echo url_wrap("/modules/encounters/view.php?id={$encounter_id}"); ?>" method="post" style="display:inline-block; margin: 0;">
+                            <input type="hidden" name="action" value="complete_encounter">
+                            <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:9px 18px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.92rem; box-shadow:0 3px 6px rgba(27,192,61,0.25);">
+                                <i class="bi bi-check-circle-fill"></i> Complete Encounter
+                            </button>
+                        </form>
                     <?php } else { ?>
                     <button type="button" class="btn" disabled style="background:#f1f3f5; color:#868e96; border:1px solid #ced4da; padding:8px 16px; border-radius:6px; cursor:not-allowed; font-size:0.9rem; font-weight:500;" title="Complete all clinical prerequisites to enable">
                         <i class="bi bi-lock-fill"></i> Complete Encounter
@@ -603,6 +663,91 @@ include(SHARED_PATH . '/header.php');
             </div>
         </div>
         <?php } ?>
+        
+        <?php if ($is_encounter_active && ($is_assigned_doctor || $is_privileged)) { ?>
+        <!-- Transfer / Reassign Encounter Modal -->
+        <div id="reassignEncounterModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+            <div class="modal-content" style="background: #fff; width: 95%; max-width: 540px; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); text-align: left; position: relative;">
+                <button type="button" onclick="closeReassignModal()" style="position: absolute; right: 18px; top: 16px; background: none; border: none; font-size: 1.5rem; color: #888; cursor: pointer;">&times;</button>
+                <h3 style="color: #0d6efd; margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="bi bi-arrow-left-right"></i> Transfer / Handover Patient
+                </h3>
+                
+                <p style="font-size: 0.88rem; color: #555; margin-bottom: 16px; line-height: 1.4;">
+                    Transfer <strong><?php echo htmlspecialchars($encounter['patient_first'] . ' ' . $encounter['patient_last']); ?></strong> to another physician. All recorded vitals, nursing notes, and preliminary entries are preserved intact.
+                </p>
+
+                <form action="" method="post">
+                    <input type="hidden" name="action" value="reassign_encounter">
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">Select Doctor to Receive Patient *</label>
+                        <select name="target_doctor_id" required style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                            <option value="">-- Choose Doctor --</option>
+                            <?php 
+                            foreach ($doctor_workloads as $doc): 
+                                if ((int)$doc['id'] === (int)$encounter['doctor_id']) continue; // skip current doctor
+                                $statusBadge = ($doc['duty_status'] === 'Available') ? '🟢 Available' : (($doc['duty_status'] === 'In Consultation') ? '🔵 In Consultation' : (($doc['duty_status'] === 'On Break') ? '🟡 On Break' : '⚪ Off Duty'));
+                            ?>
+                            <option value="<?php echo $doc['id']; ?>">
+                                Dr. <?php echo htmlspecialchars($doc['full_name']); ?> [<?php echo $statusBadge; ?> | Active Queue: <?php echo $doc['total_active_queue']; ?>]
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">Reason for Transfer *</label>
+                        <select name="reassign_reason" required style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                            <option value="">-- Select Transfer Reason --</option>
+                            <option value="Emergency / Duty Handover">Emergency / Doctor Shift Handover</option>
+                            <option value="Specialist Clinical Second Opinion">Specialist / Clinical Second Opinion</option>
+                            <option value="Queue Balancing">Queue Balancing / Clinic Workload</option>
+                            <option value="Doctor Called to Urgent Case">Doctor Called to Ward / Emergency Room</option>
+                            <option value="Patient Preference / Family Request">Patient Preference / Request</option>
+                            <option value="Other Clinical Reason">Other Clinical Reason</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">Handover Notes for Receiving Doctor (Optional)</label>
+                        <textarea name="reassign_notes" rows="3" placeholder="e.g. Patient presents with acute abdominal pain; vitals stable. Handing over as shift ends." style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.88rem; box-sizing: border-box;"></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="closeReassignModal()" style="padding: 10px 18px; border: 1px solid #ccc; background: #fff; border-radius: 6px; cursor: pointer; font-weight: 500;">Cancel</button>
+                        <button type="submit" style="padding: 10px 20px; border: none; background: #0d6efd; color: #fff; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <i class="bi bi-arrow-left-right"></i> Confirm Transfer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script>
+        function openReassignModal() {
+            var m = document.getElementById('reassignEncounterModal');
+            if (m) m.style.display = 'flex';
+        }
+        function closeReassignModal() {
+            var m = document.getElementById('reassignEncounterModal');
+            if (m) m.style.display = 'none';
+        }
+        </script>
+        <?php } ?>
+
+        <script>
+        // Keep-alive heartbeat: pings server every 4 minutes (240s) to keep consultation session alive while doctor types notes
+        setInterval(function() {
+            fetch('<?php echo url_wrap("/modules/ajax/keep_alive.php"); ?>', { credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    // Heartbeat refreshed session
+                })
+                .catch(function(err) {
+                    console.warn('Keep-alive ping failed:', err);
+                });
+        }, 240000);
+        </script>
 
     </main>
 </div>

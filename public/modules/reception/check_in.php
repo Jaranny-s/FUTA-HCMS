@@ -66,7 +66,8 @@ if (is_post_request()) {
 
 // Fetch lists for the form
 $patients = find_all_patients();
-$doctors = find_staff_by_role('doctor');
+$doctors_workload = get_doctors_workload_summary();
+$best_doctor = get_best_available_doctor();
 
 include(SHARED_PATH . '/header.php');
 ?>
@@ -133,6 +134,46 @@ include(SHARED_PATH . '/header.php');
             
             <form action="<?php echo url_wrap('/modules/reception/check_in.php'); ?>" method="post" style="padding: 30px;">
                 <input type="hidden" name="appt_id" id="appt_id_input" value="<?php echo isset($_GET['appt_id']) ? (int)$_GET['appt_id'] : ''; ?>">
+
+                <!-- Live Doctor Queue & Availability Board -->
+                <div style="margin-bottom: 25px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #0F4E74; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="bi bi-activity"></i> Live Clinic Doctor Queues
+                        </span>
+                        <?php if ($best_doctor) { ?>
+                        <button type="button" onclick="autoAssignBestDoctor()" class="btn" style="background: #e0f2fe; color: #0369a1; border: 1px solid #0284c7; padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
+                            <i class="bi bi-lightning-charge-fill"></i> Auto-Assign (Dr. <?php echo htmlspecialchars(explode(' ', $best_doctor['full_name'])[0]); ?> &bull; <?php echo (int)$best_doctor['waiting_count']; ?> in queue)
+                        </button>
+                        <?php } ?>
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <?php if (empty($doctors_workload)) { ?>
+                            <span style="color: #64748b; font-size: 0.85rem;">No doctors registered in the system.</span>
+                        <?php } else { 
+                            foreach ($doctors_workload as $d) {
+                                $dStatus = $d['duty_status'] ?? 'Available';
+                                $badgeBg = '#f0fdf4'; $badgeColor = '#166534'; $badgeBorder = '#bbf7d0'; $emoji = '🟢';
+                                if ($dStatus === 'In Consultation') {
+                                    $badgeBg = '#eff6ff'; $badgeColor = '#1d4ed8'; $badgeBorder = '#bfdbfe'; $emoji = '🔵';
+                                } elseif ($dStatus === 'On Break') {
+                                    $badgeBg = '#fefce8'; $badgeColor = '#854d0e'; $badgeBorder = '#fef08a'; $emoji = '🟡';
+                                } elseif ($dStatus === 'Off Duty') {
+                                    $badgeBg = '#f1f5f9'; $badgeColor = '#64748b'; $badgeBorder = '#e2e8f0'; $emoji = '⚪';
+                                }
+                        ?>
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 20px; font-size: 0.82rem; background: <?php echo $badgeBg; ?>; color: <?php echo $badgeColor; ?>; border: 1px solid <?php echo $badgeBorder; ?>;">
+                                <span><?php echo $emoji; ?></span>
+                                <strong>Dr. <?php echo htmlspecialchars($d['full_name']); ?></strong>
+                                <span style="opacity: 0.85; font-size: 0.78rem;">(<?php echo $dStatus; ?>)</span>
+                                <span style="background: white; border-radius: 8px; padding: 1px 7px; font-weight: 700; font-size: 0.75rem; border: 1px solid <?php echo $badgeBorder; ?>;">
+                                    <?php echo (int)$d['waiting_count']; ?> waiting
+                                </span>
+                            </div>
+                        <?php }} ?>
+                    </div>
+                </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
                     <div class="form-group" style="margin: 0;">
@@ -148,12 +189,18 @@ include(SHARED_PATH . '/header.php');
                     </div>
 
                     <div class="form-group" style="margin: 0;">
-                        <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Assign Doctor</label>
-                        <select name="doctor_id" required style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:1rem; background-color: #fcfcfc;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="margin: 0; color: #555; font-weight: 500;">Assign Doctor</label>
+                        </div>
+                        <select name="doctor_id" id="doctor_id_select" required style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:0.95rem; background-color: #fcfcfc;">
                             <option value="">-- Choose Doctor --</option>
-                            <?php while($d = $doctors->fetch_assoc()) { ?>
-                                <option value="<?php echo $d['id']; ?>">
-                                    <?php echo v_wrap($d['full_name']); ?>
+                            <?php foreach ($doctors_workload as $d) { 
+                                $dStatus = $d['duty_status'] ?? 'Available';
+                                $emoji = ($dStatus === 'Available') ? '🟢' : (($dStatus === 'In Consultation') ? '🔵' : (($dStatus === 'On Break') ? '🟡' : '⚪'));
+                                $queueTxt = $d['waiting_count'] > 0 ? "({$d['waiting_count']} in queue)" : "(0 in queue - Free)";
+                            ?>
+                                <option value="<?php echo $d['id']; ?>" data-duty="<?php echo $dStatus; ?>" data-queue="<?php echo (int)$d['waiting_count']; ?>">
+                                    <?php echo $emoji . ' ' . v_wrap($d['full_name']) . ' — ' . $dStatus . ' ' . $queueTxt; ?>
                                 </option>
                             <?php } ?>
                         </select>
@@ -202,6 +249,20 @@ include(SHARED_PATH . '/header.php');
             const selectedLabel = selectedRadio.closest('label');
             selectedLabel.style.borderColor = '#0F4E74';
             selectedLabel.style.backgroundColor = '#f0f8fc';
+        }
+
+        function autoAssignBestDoctor() {
+            const bestDocId = "<?php echo $best_doctor['id'] ?? ''; ?>";
+            const select = document.getElementById('doctor_id_select');
+            if (select && bestDocId) {
+                select.value = bestDocId;
+                select.style.borderColor = '#28a745';
+                select.style.boxShadow = '0 0 0 3px rgba(40,167,69,0.2)';
+                setTimeout(() => {
+                    select.style.borderColor = '#ddd';
+                    select.style.boxShadow = 'none';
+                }, 1200);
+            }
         }
         </script>
 

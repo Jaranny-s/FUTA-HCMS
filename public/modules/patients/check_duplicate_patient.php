@@ -9,6 +9,7 @@ if (!isset($_SESSION['staff_id']) && !isset($_SESSION['staff_role'])) {
 }
 
 $matric = trim($_GET['matric_number'] ?? $_POST['matric_number'] ?? '');
+$staffNumber = trim($_GET['staff_number'] ?? $_POST['staff_number'] ?? '');
 $phone = trim($_GET['phone'] ?? $_POST['phone'] ?? '');
 $email = trim($_GET['email'] ?? $_POST['email'] ?? '');
 $surname = trim($_GET['surname'] ?? $_POST['surname'] ?? '');
@@ -21,13 +22,26 @@ $matchReason = '';
 
 // 1. Check Matric Number
 if (!empty($matric) && strlen($matric) >= 4) {
-    $stmt = $db_1->prepare("SELECT id, patient_id, surname, first_name, middle_name, phone, email, patient_category, status, matric_number, department, created_at FROM patients WHERE UPPER(matric_number) = UPPER(?) AND id != ? LIMIT 1");
+    $stmt = $db_1->prepare("SELECT id, patient_id, surname, first_name, middle_name, phone, email, patient_category, status, matric_number, staff_number, department, created_at FROM patients WHERE UPPER(matric_number) = UPPER(?) AND id != ? LIMIT 1");
     $stmt->bind_param("si", $matric, $excludeId);
     $stmt->execute();
     $res = $stmt->get_result();
     if ($row = $res->fetch_assoc()) {
         $matchFound = $row;
         $matchReason = 'Matriculation Number (' . $matric . ')';
+    }
+    $stmt->close();
+}
+
+// 2. Check Staff Number
+if (!$matchFound && !empty($staffNumber) && strlen($staffNumber) >= 3) {
+    $stmt = $db_1->prepare("SELECT id, patient_id, surname, first_name, middle_name, phone, email, patient_category, status, matric_number, staff_number, department, created_at FROM patients WHERE UPPER(staff_number) = UPPER(?) AND id != ? LIMIT 1");
+    $stmt->bind_param("si", $staffNumber, $excludeId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($row = $res->fetch_assoc()) {
+        $matchFound = $row;
+        $matchReason = 'Staff ID / Number (' . $staffNumber . ')';
     }
     $stmt->close();
 }
@@ -87,6 +101,7 @@ if ($matchFound) {
             'patient_category' => $matchFound['patient_category'],
             'status' => $matchFound['status'],
             'matric_number' => $matchFound['matric_number'] ?? '',
+            'staff_number' => $matchFound['staff_number'] ?? '',
             'department' => $matchFound['department'] ?? '',
             'phone' => $matchFound['phone'],
             'email' => $matchFound['email'],

@@ -42,18 +42,17 @@ define("WWW_ROOT", $doc_root);
     $db_1 = db_connect(); // opens the database connection
     $errors = [];
 
-//this makes the system log out automatically 
-// if the user hasn't been active on the page 
-// for 20 minutes
-
-define('INACTIVITY_LIMIT', 1200); // seconds
+// Automated session inactivity timeout (40 minutes = 2400 seconds)
+// Striking a balance between clinical workstation security and preventing mid-consultation logouts
+define('INACTIVITY_LIMIT', 2400); 
 
 if (isset($_SESSION['LAST_ACTIVITY']) && 
     (time() - $_SESSION['LAST_ACTIVITY'] > INACTIVITY_LIMIT)) {
 
+    $redirect_target = isset($_SESSION['student_id']) ? url_wrap('/index.php') : url_wrap('/staff/login.php');
     session_unset();
     session_destroy();
-    redirect_to(url_wrap('/staff/login.php'));
+    redirect_to($redirect_target);
 }
 
 $_SESSION['LAST_ACTIVITY'] = time();

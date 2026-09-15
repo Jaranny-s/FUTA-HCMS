@@ -1247,6 +1247,11 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!form || !data) return;
 
         if (data.id) document.getElementById('edit_patient_id').value = data.id;
+        if (data.patient_category && form.querySelector('[name="patient_category"]')) {
+            const catSelect = form.querySelector('[name="patient_category"]');
+            catSelect.value = data.patient_category;
+            catSelect.dispatchEvent(new Event('change'));
+        }
         if (data.status && form.querySelector('[name="status"]')) {
             form.querySelector('[name="status"]').value = data.status;
         }
@@ -1381,18 +1386,20 @@ document.addEventListener("DOMContentLoaded", function() {
         function runDuplicateCheck() {
             if (!regForm) return;
             const matric = regForm.querySelector('[name="matric_number"]')?.value.trim() || '';
+            const staffNo = regForm.querySelector('[name="staff_number"]')?.value.trim() || '';
             const phone = regForm.querySelector('[name="phone"]')?.value.trim() || '';
             const email = regForm.querySelector('[name="email"]')?.value.trim() || '';
             const surname = regForm.querySelector('[name="surname"]')?.value.trim() || '';
             const first = regForm.querySelector('[name="first_name"]')?.value.trim() || '';
             const dob = regForm.querySelector('[name="date_of_birth"]')?.value.trim() || '';
 
-            if (!matric && !phone && !email && (!surname || !first || !dob)) {
+            if (!matric && !staffNo && !phone && !email && (!surname || !first || !dob)) {
                 return;
             }
 
             const params = new URLSearchParams();
             if (matric) params.append('matric_number', matric);
+            if (staffNo) params.append('staff_number', staffNo);
             if (phone) params.append('phone', phone);
             if (email) params.append('email', email);
             if (surname) params.append('surname', surname);
@@ -1416,7 +1423,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 .catch(err => console.error('Duplicate check error:', err));
         }
 
-        ['matric_number', 'phone', 'email', 'surname', 'first_name', 'date_of_birth'].forEach(fieldName => {
+        ['matric_number', 'staff_number', 'phone', 'email', 'surname', 'first_name', 'date_of_birth'].forEach(fieldName => {
             const el = regForm.querySelector(`[name="${fieldName}"]`);
             if (el) {
                 el.addEventListener('blur', runDuplicateCheck);

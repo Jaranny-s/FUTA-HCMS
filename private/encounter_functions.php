@@ -304,4 +304,83 @@ function get_patient_medical_history($patient_id) {
     return $query->get_result();
 }
 
+/**
+ * Retrieves all doctors with their duty_status and live waiting/active queue counts.
+ */
+function get_doctors_workload_summary() {
+    global $db_1;
+    $sql = "SELECT s.id, s.full_name, s.email, s.department, s.duty_status, s.status as account_status,
+                   COUNT(CASE WHEN e.status = 'Waiting' THEN 1 END) as waiting_count,
+                   COUNT(CASE WHEN e.status = 'In Progress' THEN 1 END) as in_progress_count,
+                   COUNT(CASE WHEN e.status IN ('Waiting', 'In Progress') THEN 1 END) as total_active_queue
+            FROM staff s
+            LEFT JOIN encounters e ON s.id = e.doctor_id AND DATE(e.created_at) = CURDATE()
+            WHERE s.role = 'doctor' AND s.status = 'active'
+            GROUP BY s.id
+            ORDER BY 
+                CASE s.duty_status 
+                    WHEN 'Available' THEN 1 
+                    WHEN 'In Consultation' THEN 2 
+                    WHEN 'On Break' THEN 3 
+                    ELSE 4 
+                END,
+                total_active_queue ASC,
+                s.full_name ASC";
+    $result = $db_1->query($sql);
+    $doctors = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $doctors[] = $row;
+        }
+    }
+    return $doctors;
+}
+
+/**
+ * Automatically selects the best available doctor (least loaded, Available or In Consultation).
+ */
+function get_best_available_doctor() {
+    $doctors = get_doctors_workload_summary();
+    // Prefer 'Available' with lowest queue
+    foreach ($doctors as $d) {
+        if ($d['duty_status'] === 'Available') {
+            return $d;
+        }
+    }
+    // Next prefer 'In Consultation' with lowest queue
+    foreach ($doctors as $d) {
+        if ($d['duty_status'] === 'In Consultation') {
+            return $d;
+        }
+    }
+    // Fallback to any on-duty doctor if all are on break or not specified
+    return !empty($doctors) ? $doctors[0] : null;
+}
+
+/**
+ * Reassigns an existing encounter to another doctor with clinical rationale.
+ */
+function reassign_encounter($encounter_id, $new_doctor_id, $reason, $reassigned_by_staff_id = null) {
+    global $db_1;
+    $enc_id = (int)$encounter_id;
+    $new_doc = (int)$new_doctor_id;
+    
+    // Fetch old doctor
+    $check_q = $db_1->query("SELECT doctor_id, encounter_number FROM encounters WHERE id = {$enc_id} LIMIT 1");
+    $enc = $check_q ? $check_q->fetch_assoc() : null;
+    if (!$enc) return false;
+    $old_doc = (int)($enc['doctor_id'] ?? 0);
+
+    $stmt = $db_1->prepare("UPDATE encounters SET doctor_id = ?, transfer_reason = ?, transferred_from = ? WHERE id = ?");
+    $stmt->bind_param("isii", $new_doc, $reason, $old_doc, $enc_id);
+    $success = $stmt->execute();
+    $stmt->close();
+
+    if ($success && function_exists('logAction')) {
+        $staff_id = $reassigned_by_staff_id ?? ($_SESSION['staff_id'] ?? 1);
+        logAction($staff_id, "Reassigned Encounter {$enc['encounter_number']} from Doctor #{$old_doc} to Doctor #{$new_doc}. Reason: {$reason}", 'encounters', $enc_id);
+    }
+    return $success;
+}
+
 ?>

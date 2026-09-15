@@ -58,6 +58,14 @@ function display_errors($errors=array()) {
      return $output;
  }
 
+function set_session_message($msg, $type = 'message') {
+    if ($type === 'error') {
+        $_SESSION['error'] = $msg;
+    } else {
+        $_SESSION['message'] = $msg;
+    }
+}
+
 function display_session_message() {
     $output = '';
 
