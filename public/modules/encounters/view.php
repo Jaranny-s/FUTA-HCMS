@@ -23,12 +23,12 @@ $current_role = $_SESSION['staff_role'] ?? '';
 $current_staff_id = $_SESSION['staff_id'] ?? null;
 $is_assigned_doctor = ($encounter['doctor_id'] == $current_staff_id);
 $is_doctor = ($current_role === 'doctor');
-$is_privileged = in_array($current_role, ['admin', 'super_admin', 'nurse']);
+$is_privileged = in_array($current_role, ['admin', 'super_admin']);
 
-// A doctor trying to perform a write action on someone else's encounter is blocked at form level.
-// We capture this flag and pass it to the UI so write buttons are hidden/disabled.
+// A doctor or unauthorized staff trying to write to someone else's encounter is blocked at form level.
+// We capture this flag and pass it to the UI so clinical write buttons are hidden/disabled.
 $is_encounter_active = ($encounter['status'] !== 'Completed' && $encounter['status'] !== 'Cancelled');
-$can_write_clinical = $is_encounter_active && (!$is_doctor || $is_assigned_doctor);
+$can_write_clinical = $is_encounter_active && (($is_doctor && $is_assigned_doctor) || $is_privileged);
 $can_record_vitals = $is_encounter_active && (hasPermission('record_vitals') || hasPermission('edit_vitals') || in_array($current_role, ['nurse', 'doctor', 'admin', 'super_admin']));
 
 // Handle POST submissions
@@ -36,10 +36,10 @@ if (is_post_request()) {
     $action = $_POST['action'] ?? '';
     $staff_id = $_SESSION['staff_id'];
 
-    // For any clinical write action by a doctor, enforce assignment
-    $clinical_write_actions = ['save_consultation', 'save_diagnosis', 'save_prescription', 'complete_encounter'];
-    if ($is_doctor && !$is_assigned_doctor && in_array($action, $clinical_write_actions)) {
-        $_SESSION['error'] = "Access Denied: You can only write clinical notes for encounters assigned to you.";
+    // Enforce clinical permissions: only assigned doctor or admin/super_admin can write consultation, diagnosis, prescription, complete, or reassign
+    $clinical_write_actions = ['save_consultation', 'save_diagnosis', 'save_prescription', 'complete_encounter', 'reassign_encounter'];
+    if (!$can_write_clinical && in_array($action, $clinical_write_actions)) {
+        $_SESSION['error'] = "Access Denied: Only the assigned doctor or clinic administrators can perform this action.";
         redirect_to(url_wrap("/modules/encounters/view.php?id={$encounter_id}"));
     }
 
@@ -177,7 +177,7 @@ $has_diagnosis = ($diagnoses && $diagnoses->num_rows > 0);
 $can_complete_encounter = $has_vitals_nursing && $has_consultation && $has_diagnosis;
 $can_prescribe = (hasPermission('prescribe_medication') || in_array($current_role, ['doctor', 'super_admin'])) && $can_write_clinical;
 
-if ($is_doctor && $is_assigned_doctor && $is_encounter_active) {
+if ($is_doctor && $is_assigned_doctor && $encounter['status'] === 'In Progress') {
     $db_1->query("UPDATE staff SET duty_status = 'In Consultation' WHERE id = " . (int)$current_staff_id);
 }
 

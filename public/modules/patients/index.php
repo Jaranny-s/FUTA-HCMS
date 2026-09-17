@@ -94,26 +94,26 @@ $canManagePatients = in_array($_SESSION['staff_role'] ?? '', ['receptionist', 'a
         
         <form action="<?php echo url_wrap('/modules/patients/new_patient_processor.php'); ?>" method="post" enctype="multipart/form-data" id="patientRegistrationForm">
             
+            <!-- Duplicate / Former Patient Detection Alert (Globally visible across all steps) -->
+            <div id="regDuplicatePatientAlert" style="display:none; background:#fff8e1; border:1px solid #ffe082; padding:14px 16px; border-radius:8px; margin-bottom:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+                <div style="font-weight:600; color:#b78103; display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:0.95rem;">
+                    <i class="bi bi-person-exclamation" style="font-size:1.25rem;"></i> Matching Historical Patient Record Found
+                </div>
+                <div id="regDuplicateDetails" style="font-size:0.88rem; color:#444; line-height:1.5;"></div>
+                <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="button" id="btnTransitionExisting" class="btn" style="background:#0F4E74; color:white; border:none; padding:8px 16px; border-radius:5px; font-size:0.85rem; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-arrow-repeat"></i> Transition & Reactivate Existing Record
+                    </button>
+                    <button type="button" id="btnDismissDuplicate" class="btn" style="background:#e0e0e0; color:#333; border:none; padding:8px 14px; border-radius:5px; font-size:0.85rem; cursor:pointer;">
+                        Dismiss & Register as New
+                    </button>
+                </div>
+            </div>
+
             <!-- Step 1: Basic Information -->
             <div class="modal-step" data-step="1">
                 <h4 style="margin-top:0; color:#0F4E74;">Step 1: Basic Information</h4>
                 <hr style="margin-bottom:15px; border:0; border-top:1px solid #eee;" />
-                
-                <!-- Duplicate / Former Patient Detection Alert -->
-                <div id="regDuplicatePatientAlert" style="display:none; background:#fff8e1; border:1px solid #ffe082; padding:14px 16px; border-radius:8px; margin-bottom:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-                    <div style="font-weight:600; color:#b78103; display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:0.95rem;">
-                        <i class="bi bi-person-exclamation" style="font-size:1.25rem;"></i> Matching Historical Patient Record Found
-                    </div>
-                    <div id="regDuplicateDetails" style="font-size:0.88rem; color:#444; line-height:1.5;"></div>
-                    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                        <button type="button" id="btnTransitionExisting" class="btn" style="background:#0F4E74; color:white; border:none; padding:8px 16px; border-radius:5px; font-size:0.85rem; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
-                            <i class="bi bi-arrow-repeat"></i> Transition & Reactivate Existing Record
-                        </button>
-                        <button type="button" id="btnDismissDuplicate" class="btn" style="background:#e0e0e0; color:#333; border:none; padding:8px 14px; border-radius:5px; font-size:0.85rem; cursor:pointer;">
-                            Dismiss & Register as New
-                        </button>
-                    </div>
-                </div>
                 
                 <div class="form-group" style="margin-bottom: 12px;">
                     <label style="font-weight:600;">Patient Category *</label>
@@ -1416,6 +1416,8 @@ document.addEventListener("DOMContentLoaded", function() {
                         if (dupAlert && dupDetails) {
                             dupDetails.innerHTML = `<strong>${data.patient.full_name}</strong> (${data.patient.patient_id}) was previously registered as a <strong>${data.patient.patient_category}</strong> (Status: <strong>${data.patient.status}</strong>, Dept: ${data.patient.department || 'N/A'}, Registered: ${data.patient.registered_date}).<br><span style="color:#0F4E74; font-size:0.83rem;">Matched by: ${data.reason}</span>`;
                             dupAlert.style.display = 'block';
+                            const mContent = regModalEl.querySelector('.modal-content');
+                            if (mContent) mContent.scrollTop = 0;
                         }
                     } else {
                         if (dupAlert) dupAlert.style.display = 'none';

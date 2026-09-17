@@ -394,6 +394,7 @@ function update_staff($staff) {
     }
 
     $status = !empty($staff['status']) ? strtolower($staff['status']) : 'active';
+    $shift = !empty($staff['current_shift']) ? $staff['current_shift'] : 'Morning';
     
     $sql = "UPDATE staff SET ";
     $sql .= "full_name = ?, ";
@@ -404,7 +405,8 @@ function update_staff($staff) {
     $sql .= "role = ?, ";
     $sql .= "department = ?, ";
     $sql .= "profile_image = ?, ";
-    $sql .= "status = ? ";
+    $sql .= "status = ?, ";
+    $sql .= "current_shift = ? ";
     $sql .= "WHERE id = ? ";
     $sql .= "LIMIT 1";
     
@@ -413,9 +415,9 @@ function update_staff($staff) {
     
     if($password_sent) {
         $hashed_password = password_hash($staff['hashed_password'], PASSWORD_BCRYPT);
-        $query->bind_param("sssssssi", $staff['full_name'], $staff['email'], $hashed_password, $staff['role'], $staff['department'], $staff['profile_image'], $status, $staff['id']);
+        $query->bind_param("ssssssssi", $staff['full_name'], $staff['email'], $hashed_password, $staff['role'], $staff['department'], $staff['profile_image'], $status, $shift, $staff['id']);
     } else {
-        $query->bind_param("ssssssi", $staff['full_name'], $staff['email'], $staff['role'], $staff['department'], $staff['profile_image'], $status, $staff['id']);
+        $query->bind_param("sssssssi", $staff['full_name'], $staff['email'], $staff['role'], $staff['department'], $staff['profile_image'], $status, $shift, $staff['id']);
     }
     $query->execute();
     

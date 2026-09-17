@@ -10,12 +10,15 @@ if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], ['phar
 $id = $_GET['id'] ?? null;
 $rx = null;
 
-if ($id && is_numeric($id)) {
-    $rx = get_prescription_details((int)$id);
-    if (!$rx || $rx['status'] != 'Pending') {
-        $_SESSION['error'] = "Prescription not found or already dispensed.";
-        redirect_to(url_wrap('/modules/pharmacy/index.php'));
-    }
+if (!$id || !is_numeric($id)) {
+    $_SESSION['message'] = "Please select a pending prescription from the queue to process and dispense.";
+    redirect_to(url_wrap('/modules/pharmacy/index.php?status=Pending'));
+}
+
+$rx = get_prescription_details((int)$id);
+if (!$rx || $rx['status'] != 'Pending') {
+    $_SESSION['error'] = "Prescription not found or already dispensed.";
+    redirect_to(url_wrap('/modules/pharmacy/index.php'));
 }
 
 if (is_post_request()) {

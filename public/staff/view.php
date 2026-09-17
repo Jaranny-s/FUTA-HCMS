@@ -145,11 +145,25 @@ endif; ?>
       </span>
     </dd>
     </dl>
+
+    <dl>
+    <dt>Assigned Shift:</dt>
+    <dd>
+      <?php
+      $shifts_def = function_exists('get_shift_definitions') ? get_shift_definitions() : [];
+      $sKey = $staff['current_shift'] ?? 'Morning';
+      $sMeta = $shifts_def[$sKey] ?? ['name' => $sKey, 'time' => '', 'bg' => '#f1f5f9', 'color' => '#475569'];
+      ?>
+      <span class="badge" style="background:<?php echo $sMeta['bg']; ?>; color:<?php echo $sMeta['color']; ?>; border:1px solid <?php echo $sMeta['color']; ?>; padding:3px 10px; border-radius:4px; font-weight:600;">
+        <?php echo v_wrap($sMeta['name']); ?> <?php if(!empty($sMeta['time'])) echo '(' . v_wrap($sMeta['time']) . ')'; ?>
+      </span>
+    </dd>
+    </dl>
     </div>  
         <?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="staff-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';">
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="" class="staff-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';">
         <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="staff-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';">
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="" class="staff-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';">
         <?php } ?>
         </div>
  </main>

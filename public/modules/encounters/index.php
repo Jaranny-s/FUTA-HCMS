@@ -2,33 +2,45 @@
 require_once('../../../private/config.php'); 
 require_password_reset();
 
+if (function_exists('sweep_expired_appointments')) {
+    sweep_expired_appointments();
+}
+
 $page_title = 'Encounters Dashboard';
 $specificCss = '/assets/css/encounters.css';
 
-// We can filter by status and doctor assignment if passed in URL
-$status_filter = $_GET['status'] ?? null;
-$mine = isset($_GET['mine']) && $_GET['mine'] == '1';
+// Filter setup
 $current_role = $_SESSION['staff_role'] ?? '';
 $is_doctor = ($current_role === 'doctor');
+$current_staff_id = $_SESSION['staff_id'] ?? null;
 
-$my_encounters_count = 0;
-if ($is_doctor && isset($_SESSION['staff_id'])) {
-    $chk_q = $db_1->prepare("SELECT COUNT(*) FROM encounters WHERE doctor_id = ?");
-    $chk_q->bind_param("i", $_SESSION['staff_id']);
-    $chk_q->execute();
-    $chk_q->bind_result($my_encounters_count);
-    $chk_q->fetch();
-    $chk_q->close();
+$my_active_count = 0;
+$my_total_count = 0;
+if ($is_doctor && $current_staff_id) {
+    $c_q = $db_1->prepare("SELECT 
+        COUNT(CASE WHEN status IN ('Waiting', 'In Progress') THEN 1 END) as active_c,
+        COUNT(*) as total_c 
+        FROM encounters WHERE doctor_id = ?");
+    $c_q->bind_param("i", $current_staff_id);
+    $c_q->execute();
+    $c_q->bind_result($my_active_count, $my_total_count);
+    $c_q->fetch();
+    $c_q->close();
 }
 
-// If doctor tried to access ?mine=1 but has no encounters assigned, redirect with message
-if ($mine && $is_doctor && $my_encounters_count == 0) {
-    set_session_message("You currently have no patient encounters assigned to you.", "info");
-    redirect_to(url_wrap('/modules/encounters/index.php'));
+// Scope: if doctor, default to their own queue ('mine') unless 'all' is explicitly requested
+$scope = $_GET['scope'] ?? ($is_doctor ? 'mine' : 'all');
+$mine = ($is_doctor && $scope === 'mine');
+
+// Status filter: for doctor in 'mine' scope, default to 'Active' (Waiting + In Progress) unless overridden
+$status_filter = $_GET['status'] ?? ($mine ? 'Active' : null);
+if ($status_filter === 'all' || $status_filter === '') {
+    $status_filter = null;
 }
 
-$doctor_filter = ($mine && $is_doctor && $my_encounters_count > 0) ? $_SESSION['staff_id'] : null;
-$encounters = find_all_encounters($status_filter, $doctor_filter);
+$search = trim($_GET['search'] ?? '');
+$doctor_filter = $mine ? $current_staff_id : null;
+$encounters = find_all_encounters($status_filter, $doctor_filter, $search);
 
 include(SHARED_PATH . '/header.php'); 
 ?>
@@ -37,10 +49,9 @@ include(SHARED_PATH . '/header.php');
   <?php include(SHARED_PATH . '/navigation.php'); ?>
   <main class="main-content">
     
-    
     <div class="top">
         <p class="top-head">Encounters & Clinical Queue</p> 
-        <p class="top-description">Manage active patient visits and clinical workflows.</p>
+        <p class="top-description">Manage active patient visits, doctor assignments, and clinical workflows.</p>
     </div>
 
     <div><?php echo display_session_message(); ?></div>
@@ -104,28 +115,76 @@ include(SHARED_PATH . '/header.php');
       <?php } ?>
     </div>
 
-    <?php 
-    $mine_param = ($mine && $is_doctor && $my_encounters_count > 0) ? '&mine=1' : '';
-    ?>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <div class="tabs" role="tablist" style="margin-bottom: 0;">
-            <a href="?status=<?php echo $mine_param; ?>" class="tab-btn <?php echo !$status_filter ? 'active' : ''; ?>" style="text-decoration:none;">All</a>
-            <a href="?status=Waiting<?php echo $mine_param; ?>" class="tab-btn <?php echo $status_filter == 'Waiting' ? 'active' : ''; ?>" style="text-decoration:none;">Waiting (Nurse Queue)</a>
-            <a href="?status=In Progress<?php echo $mine_param; ?>" class="tab-btn <?php echo $status_filter == 'In Progress' ? 'active' : ''; ?>" style="text-decoration:none;">In Progress (Doctor)</a>
-            <a href="?status=Completed<?php echo $mine_param; ?>" class="tab-btn <?php echo $status_filter == 'Completed' ? 'active' : ''; ?>" style="text-decoration:none;">Completed</a>
+            <?php if ($mine) { ?>
+                <a href="?scope=mine&status=Active<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter === 'Active' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    <i class="bi bi-lightning-charge-fill"></i> Active Queue (<?php echo $my_active_count; ?>)
+                </a>
+                <a href="?scope=mine&status=Waiting<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter === 'Waiting' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    Waiting (Nurse)
+                </a>
+                <a href="?scope=mine&status=In+Progress<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter === 'In Progress' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    In Consultation
+                </a>
+                <a href="?scope=mine&status=Completed<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter === 'Completed' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    Completed
+                </a>
+                <a href="?scope=mine&status=all<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter === null ? 'active' : ''; ?>" style="text-decoration:none;">
+                    All My History (<?php echo $my_total_count; ?>)
+                </a>
+            <?php } else { ?>
+                <a href="?scope=all<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo !$status_filter ? 'active' : ''; ?>" style="text-decoration:none;">
+                    All Clinic Encounters
+                </a>
+                <a href="?scope=all&status=Waiting<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter == 'Waiting' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    Waiting (Nurse Queue)
+                </a>
+                <a href="?scope=all&status=In+Progress<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter == 'In Progress' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    In Progress (Doctor)
+                </a>
+                <a href="?scope=all&status=Completed<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="tab-btn <?php echo $status_filter == 'Completed' ? 'active' : ''; ?>" style="text-decoration:none;">
+                    Completed
+                </a>
+            <?php } ?>
         </div>
         
-        <?php if ($is_doctor && $my_encounters_count > 0) { ?>
+        <?php if ($is_doctor) { ?>
         <div style="display: flex; gap: 6px; background: #e9ecef; padding: 4px; border-radius: 6px;">
-            <a href="?status=<?php echo urlencode($status_filter ?? ''); ?>" style="text-decoration: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; font-weight: 600; <?php echo !$mine ? 'background: #0F4E74; color: white;' : 'color: #555;'; ?>">
-                <i class="bi bi-people"></i> All Clinic Encounters
+            <a href="?scope=mine&status=Active" style="text-decoration: none; padding: 6px 14px; font-size: 0.85rem; border-radius: 4px; font-weight: 600; <?php echo $mine ? 'background: #0F4E74; color: white;' : 'color: #555;'; ?>">
+                <i class="bi bi-person-badge"></i> My Active Queue (<?php echo $my_active_count; ?>)
             </a>
-            <a href="?status=<?php echo urlencode($status_filter ?? ''); ?>&mine=1" style="text-decoration: none; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; font-weight: 600; <?php echo $mine ? 'background: #0F4E74; color: white;' : 'color: #555;'; ?>">
-                <i class="bi bi-person-badge"></i> My Encounters (<?php echo $my_encounters_count; ?>)
+            <a href="?scope=all" style="text-decoration: none; padding: 6px 14px; font-size: 0.85rem; border-radius: 4px; font-weight: 600; <?php echo !$mine ? 'background: #0F4E74; color: white;' : 'color: #555;'; ?>">
+                <i class="bi bi-people"></i> All Clinic Doctors
             </a>
         </div>
         <?php } ?>
     </div>
+
+    <!-- Uniform Search Bar (Styled identically to Patients & Staff Index) -->
+    <form method="GET" style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+        <input type="hidden" name="scope" value="<?php echo htmlspecialchars($scope); ?>">
+        <?php if ($status_filter) { ?>
+            <input type="hidden" name="status" value="<?php echo htmlspecialchars($status_filter); ?>">
+        <?php } ?>
+        
+        <span style="color: #666666; border: 1px solid #666666; border-left: 3px solid #0F4E74; padding: 4px 6px; border-radius: 4px; display: inline-flex; align-items: center; background: #fff;">
+            <i class="bi bi-search" style="margin-right: 6px;"></i>
+            <input type="text" name="search" placeholder="Search patient name, ID, or encounter #..." 
+                   style="color: #333; outline: none; border: none; width: 280px; font-size: 0.9rem;" 
+                   value="<?php echo htmlspecialchars($search); ?>">
+        </span>
+        
+        <button type="submit" id="filterBtn" style="background: #0F4E74; color: white; border: none; padding: 7px 16px; border-radius: 4px; font-size: 0.88rem; cursor: pointer; font-weight: 600;">
+            Search
+        </button>
+
+        <?php if (!empty($search)) { ?>
+            <a href="?scope=<?php echo urlencode($scope); ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?>" style="font-size: 0.85rem; color: #dc3545; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <i class="bi bi-x-circle"></i> Clear Filter
+            </a>
+        <?php } ?>
+    </form>
 
     <div class="encounter-list-container">
         <table class="staff-list">

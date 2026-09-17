@@ -47,10 +47,10 @@ function create_encounter($patient_id, $doctor_id, $appointment_id, $priority, $
     return $new_id;
 }
 
-function find_all_encounters($status = null, $doctor_id = null) {
+function find_all_encounters($status = null, $doctor_id = null, $search = null) {
     global $db_1;
     
-    $sql = "SELECT e.*, p.first_name as patient_first, p.surname as patient_last, p.patient_id as p_id, COALESCE(d.full_name, 'Unassigned') as doctor_name ";
+    $sql = "SELECT e.*, p.first_name as patient_first, p.surname as patient_last, p.middle_name as patient_middle, p.patient_id as p_id, COALESCE(d.full_name, 'Unassigned') as doctor_name ";
     $sql .= "FROM encounters e ";
     $sql .= "JOIN patients p ON e.patient_id = p.id ";
     $sql .= "LEFT JOIN staff d ON e.doctor_id = d.id ";
@@ -60,15 +60,30 @@ function find_all_encounters($status = null, $doctor_id = null) {
     $params = [];
 
     if ($status) {
-        $conditions[] = "e.status = ?";
-        $types .= "s";
-        $params[] = $status;
+        if ($status === 'Active') {
+            $conditions[] = "e.status IN ('Waiting', 'In Progress')";
+        } else {
+            $conditions[] = "e.status = ?";
+            $types .= "s";
+            $params[] = $status;
+        }
     }
 
     if ($doctor_id) {
         $conditions[] = "e.doctor_id = ?";
         $types .= "i";
         $params[] = $doctor_id;
+    }
+
+    if (!empty($search)) {
+        $searchTerm = '%' . trim($search) . '%';
+        $conditions[] = "(p.first_name LIKE ? OR p.surname LIKE ? OR p.middle_name LIKE ? OR p.patient_id LIKE ? OR e.encounter_number LIKE ?)";
+        $types .= "sssss";
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
     }
 
     if (!empty($conditions)) {
@@ -314,7 +329,7 @@ function get_doctors_workload_summary() {
                    COUNT(CASE WHEN e.status = 'In Progress' THEN 1 END) as in_progress_count,
                    COUNT(CASE WHEN e.status IN ('Waiting', 'In Progress') THEN 1 END) as total_active_queue
             FROM staff s
-            LEFT JOIN encounters e ON s.id = e.doctor_id AND DATE(e.created_at) = CURDATE()
+            LEFT JOIN encounters e ON s.id = e.doctor_id AND e.status IN ('Waiting', 'In Progress')
             WHERE s.role = 'doctor' AND s.status = 'active'
             GROUP BY s.id
             ORDER BY 
@@ -330,6 +345,12 @@ function get_doctors_workload_summary() {
     $doctors = [];
     if ($result) {
         while ($row = $result->fetch_assoc()) {
+            // Self-healing: If doctor is marked "In Consultation" but has 0 In Progress encounters,
+            // they are actually Available in their clinic office.
+            if ($row['duty_status'] === 'In Consultation' && (int)$row['in_progress_count'] === 0) {
+                $row['duty_status'] = 'Available';
+                $db_1->query("UPDATE staff SET duty_status = 'Available' WHERE id = " . (int)$row['id']);
+            }
             $doctors[] = $row;
         }
     }
@@ -381,6 +402,26 @@ function reassign_encounter($encounter_id, $new_doctor_id, $reason, $reassigned_
         logAction($staff_id, "Reassigned Encounter {$enc['encounter_number']} from Doctor #{$old_doc} to Doctor #{$new_doc}. Reason: {$reason}", 'encounters', $enc_id);
     }
     return $success;
+}
+
+/**
+ * Sweeps and marks past or grace-period expired appointments as 'No Show'.
+ * Grace period: 60 minutes after scheduled appointment_date.
+ * Also synchronizes completed/in-progress encounters with their appointments.
+ */
+function sweep_expired_appointments() {
+    global $db_1;
+    if (!$db_1) return;
+
+    // 1. Mark unattended appointments where 60 minutes have elapsed past the scheduled time as 'No Show'
+    $db_1->query("UPDATE appointments SET status = 'No Show' WHERE status IN ('Pending', 'Approved') AND DATE_ADD(appointment_date, INTERVAL 60 MINUTE) < NOW()");
+
+    // 2. Synchronize appointments that have completed encounters
+    $db_1->query("UPDATE appointments a JOIN encounters e ON e.appointment_id = a.id SET a.status = 'Completed' WHERE e.status = 'Completed' AND a.status != 'Completed'");
+    $db_1->query("UPDATE appointments a JOIN encounters e ON e.patient_id = a.patient_id AND DATE(e.created_at) = DATE(a.appointment_date) SET e.appointment_id = a.id, a.status = 'Completed' WHERE e.status = 'Completed' AND a.status = 'Checked In' AND (e.appointment_id IS NULL OR e.appointment_id = 0)");
+
+    // 3. Synchronize appointments that have active in-progress encounters
+    $db_1->query("UPDATE appointments a JOIN encounters e ON e.appointment_id = a.id SET a.status = 'In Progress' WHERE e.status = 'In Progress' AND a.status NOT IN ('In Progress', 'Completed')");
 }
 
 ?>

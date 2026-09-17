@@ -308,8 +308,14 @@ document.addEventListener("DOMContentLoaded", function() {
 			<input type="checkbox" name="Doctor"<?php if($onlyDoctor) echo 'checked'; ?>> Doctor only 
 		</label>
 		
-	<div>
-		<button id="filterBtn" type="submit">Filter</button></div>
+	<div style="display: flex; gap: 10px; align-items: center;">
+		<button id="filterBtn" type="submit">Filter</button>
+        <?php if (in_array($_SESSION['staff_role'] ?? '', ['admin', 'super_admin'])) { ?>
+        <button type="button" data-modal-target="dutyRosterModal" class="btn" style="background:#0F4E74; color:white; border:none; padding:6px 14px; border-radius:4px; font-size:0.85rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            <i class="bi bi-calendar-week"></i> Doctor Duty Roster
+        </button>
+        <?php } ?>
+	</div>
 	</form> 
       
    <table class="staff-list">
@@ -317,6 +323,8 @@ document.addEventListener("DOMContentLoaded", function() {
         <th>Photo</th>
         <th>Staff ID</th>
         <th>Full Name</th>
+        <th>Shift</th>
+        <th>Duty Status</th>
         <th>Email</th>
         <th>Department</th>
         <th>Time Registered</th>
@@ -326,12 +334,22 @@ document.addEventListener("DOMContentLoaded", function() {
   	  </tr>
       <?php 
       $admin = find_staff_by_role('doctor');
+      $shifts_def = function_exists('get_shift_definitions') ? get_shift_definitions() : [];
+      $canEditShift = in_array($_SESSION['staff_role'] ?? '', ['admin', 'super_admin']);
       
-      while($staff = $admin->fetch_assoc()) { ?>
+      while($staff = $admin->fetch_assoc()) { 
+          $sKey = $staff['current_shift'] ?? 'Morning';
+          $sMeta = $shifts_def[$sKey] ?? ['name' => $sKey, 'bg' => '#f1f5f9', 'color' => '#475569', 'border' => '#e2e8f0'];
+          $dDuty = $staff['duty_status'] ?? 'Available';
+          $dBg = '#f0fdf4'; $dColor = '#166534';
+          if ($dDuty === 'In Consultation') { $dBg = '#eff6ff'; $dColor = '#1d4ed8'; }
+          elseif ($dDuty === 'On Break') { $dBg = '#fefce8'; $dColor = '#854d0e'; }
+          elseif ($dDuty === 'Off Duty') { $dBg = '#f1f5f9'; $dColor = '#64748b'; }
+      ?>
         
         <tr>
           <td><?php if (!empty($staff['profile_image']) && file_exists(__DIR__ . '/images/staff_pictures/' . $staff['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="Staff profile photo" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
+            <img src="<?php echo url_wrap('/staff/images/staff_pictures/' . v_wrap(ru_wrap($staff['profile_image']))); ?>" alt="" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                 <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -339,7 +357,7 @@ document.addEventListener("DOMContentLoaded", function() {
                  style=" border: 1.5px solid red;"
                  <?php } ?>>
             <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="No Staff photo uploaded" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
+            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage));?>" alt="" class="patient-profile-thumbnail" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultStaffImage)); ?>';"
                  <?php if (($staff['status']) == 'active') { ?>
                  style=" border: 1.5px solid #0F4E74;"
                  <?php } ?>
@@ -348,7 +366,26 @@ document.addEventListener("DOMContentLoaded", function() {
                  <?php } ?>>
           <?php } ?></td>
           <td><?php echo v_wrap($staff['system_staff_id']); ?></td>
-          <td><?php echo v_wrap($staff['full_name']); ?></td>
+          <td><strong><?php echo v_wrap($staff['full_name']); ?></strong></td>
+          <td>
+            <?php if ($canEditShift) { ?>
+              <select onchange="quickUpdateDoctorShift(<?php echo $staff['id']; ?>, this.value)" style="background:<?php echo $sMeta['bg']; ?>; color:<?php echo $sMeta['color']; ?>; border:1px solid <?php echo $sMeta['border']; ?>; padding:4px 8px; border-radius:6px; font-weight:600; font-size:0.82rem; cursor:pointer;">
+                <option value="Morning" <?php echo $sKey === 'Morning' ? 'selected' : ''; ?>>Morning</option>
+                <option value="Afternoon" <?php echo $sKey === 'Afternoon' ? 'selected' : ''; ?>>Afternoon</option>
+                <option value="Night" <?php echo $sKey === 'Night' ? 'selected' : ''; ?>>Night</option>
+                <option value="Off Duty" <?php echo $sKey === 'Off Duty' ? 'selected' : ''; ?>>Off Duty</option>
+              </select>
+            <?php } else { ?>
+              <span style="background:<?php echo $sMeta['bg']; ?>; color:<?php echo $sMeta['color']; ?>; border:1px solid <?php echo $sMeta['border']; ?>; padding:4px 10px; border-radius:6px; font-weight:600; font-size:0.82rem;">
+                <?php echo v_wrap($sMeta['name']); ?>
+              </span>
+            <?php } ?>
+          </td>
+          <td>
+            <span style="background:<?php echo $dBg; ?>; color:<?php echo $dColor; ?>; padding:3px 9px; border-radius:12px; font-weight:600; font-size:0.8rem; white-space:nowrap;">
+              <?php echo v_wrap($dDuty); ?>
+            </span>
+          </td>
           <td><?php echo v_wrap($staff['email']); ?></td>
           <td><?php echo v_wrap($staff['department']); ?></td>
           <td><?php echo v_wrap($staff['created_at']); ?></td>
@@ -656,6 +693,126 @@ $queryString = http_build_query([
       </form>
     </div>
     
+    <!-- Doctor Duty Roster Modal -->
+    <?php if (in_array($_SESSION['staff_role'] ?? '', ['admin', 'super_admin'])) { ?>
+    <div id="dutyRosterModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px; max-height: 85vh; overflow-y: auto;">
+            <button class="modal-close" data-modal-close>&times;</button>
+            <h3 class="modal-title"><i class="bi bi-calendar-week"></i> Doctor Duty Roster & Shifts</h3>
+            <p style="font-size: 0.88rem; color: #64748b; margin-top: 0; margin-bottom: 20px;">
+                Manage working shifts and call duty for all clinic doctors. Setting a doctor to <em>Off Duty</em> marks them unavailable in reception.
+            </p>
+
+            <!-- Shift Schedule Reference Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                <?php foreach ($shifts_def as $sk => $sm) { ?>
+                    <div style="background: <?php echo $sm['bg']; ?>; border: 1px solid <?php echo $sm['border']; ?>; border-radius: 8px; padding: 10px 14px;">
+                        <div style="font-weight: 700; color: <?php echo $sm['color']; ?>; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="bi <?php echo $sm['icon']; ?>"></i> <?php echo v_wrap($sm['name']); ?>
+                        </div>
+                        <div style="font-size: 0.78rem; color: #475569; margin-top: 3px;"><?php echo v_wrap($sm['time']); ?></div>
+                    </div>
+                <?php } ?>
+            </div>
+
+            <!-- Doctor Roster Table -->
+            <?php
+            $roster_doctors = function_exists('get_doctor_shift_roster') ? get_doctor_shift_roster() : [];
+            ?>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                        <th style="padding: 10px 12px;">Doctor</th>
+                        <th style="padding: 10px 12px;">Active Queue</th>
+                        <th style="padding: 10px 12px;">Duty Status</th>
+                        <th style="padding: 10px 12px;">Current Shift</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($roster_doctors && $roster_doctors->num_rows > 0) {
+                        while ($rd = $roster_doctors->fetch_assoc()) { 
+                            $rKey = $rd['current_shift'] ?? 'Morning';
+                            $rDuty = $rd['duty_status'] ?? 'Available';
+                            $rdBg = '#f0fdf4'; $rdColor = '#166534';
+                            if ($rDuty === 'In Consultation') { $rdBg = '#eff6ff'; $rdColor = '#1d4ed8'; }
+                            elseif ($rDuty === 'On Break') { $rdBg = '#fefce8'; $rdColor = '#854d0e'; }
+                            elseif ($rDuty === 'Off Duty') { $rdBg = '#f1f5f9'; $rdColor = '#64748b'; }
+                    ?>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 12px;">
+                            <strong><?php echo v_wrap($rd['full_name']); ?></strong>
+                            <div style="font-size: 0.78rem; color: #64748b;"><?php echo v_wrap($rd['system_staff_id']); ?> &bull; <?php echo v_wrap($rd['department']); ?></div>
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 0.8rem;">
+                                <?php echo (int)$rd['active_queue_count']; ?> waiting
+                            </span>
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            <span style="background: <?php echo $rdBg; ?>; color: <?php echo $rdColor; ?>; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 0.8rem;">
+                                <?php echo v_wrap($rDuty); ?>
+                            </span>
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            <select onchange="quickUpdateDoctorShift(<?php echo $rd['id']; ?>, this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; font-weight: 600; cursor: pointer; width: 100%;">
+                                <?php foreach ($shifts_def as $optKey => $optMeta) { ?>
+                                    <option value="<?php echo $optKey; ?>" <?php echo $rKey === $optKey ? 'selected' : ''; ?>>
+                                        <?php echo v_wrap($optMeta['name']); ?>
+                                    </option>
+                                <?php } ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <?php } } else { ?>
+                    <tr><td colspan="4" style="text-align:center; padding: 20px; color: #64748b;">No doctors found.</td></tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php } ?>
+
+    <!-- Shift Update Notification Toast / JS -->
+    <script>
+    function quickUpdateDoctorShift(doctorId, newShift) {
+        const formData = new FormData();
+        formData.append('doctor_id', doctorId);
+        formData.append('shift', newShift);
+
+        fetch('<?php echo url_wrap("/staff/update_shift.php"); ?>', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const msgBox = document.getElementById('ajax-message');
+                if (msgBox) {
+                    msgBox.hidden = false;
+                    msgBox.className = 'ajax-message success';
+                    msgBox.style.display = 'block';
+                    msgBox.style.background = '#dcfce7';
+                    msgBox.style.color = '#15803d';
+                    msgBox.style.padding = '10px 16px';
+                    msgBox.style.borderRadius = '6px';
+                    msgBox.style.marginBottom = '15px';
+                    msgBox.innerHTML = '<i class="bi bi-check-circle-fill"></i> Doctor shift updated to ' + newShift + ' successfully!';
+                    setTimeout(() => { msgBox.style.display = 'none'; }, 4000);
+                }
+            } else {
+                alert(data.message || 'Failed to update shift.');
+            }
+        })
+        .catch(err => {
+            console.error('Shift update error:', err);
+            alert('An error occurred while updating the shift.');
+        });
+    }
+    </script>
+
      </main>
   
 </div>

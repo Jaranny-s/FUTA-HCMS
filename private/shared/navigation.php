@@ -112,9 +112,6 @@ $role = $_SESSION['staff_role'] ?? '';
             <a href="<?php echo url_wrap('/modules/pharmacy/inventory.php'); ?>" class="nav-item <?php if($current_script == 'inventory.php') echo 'active'; ?>">
                 <i class="bi bi-box-seam"></i> Drug Inventory
             </a>
-            <a href="<?php echo url_wrap('/modules/pharmacy/dispense.php'); ?>" class="nav-item <?php if($current_script == 'dispense.php') echo 'active'; ?>">
-                <i class="bi bi-bag-check"></i> Dispense Medication
-            </a>
 
         <?php elseif(in_array($role, ['admin', 'super_admin'])): ?>
             <!-- ADMIN / SUPER ADMIN NAV -->

@@ -85,37 +85,63 @@ include(SHARED_PATH . '/header.php');
         <?php if (isset($_SESSION['error'])) { echo "<div style='color:#d9534f; background:#f9eded; padding:15px; border-radius:8px; margin-bottom:20px; font-weight:500;'><i class='bi bi-exclamation-triangle-fill'></i> {$_SESSION['error']}</div>"; unset($_SESSION['error']); } ?>
 
         <?php
-        // Automatically sweep and mark past-date unattended appointments as 'No Show'
-        $db_1->query("UPDATE appointments SET status = 'No Show' WHERE status IN ('Pending', 'Approved') AND DATE(appointment_date) < CURDATE()");
+        // Sweep appointments past 60-minute grace period
+        if (function_exists('sweep_expired_appointments')) {
+            sweep_expired_appointments();
+        }
 
-        // Fetch pending appointments
-        $app_query = $db_1->query("SELECT a.*, p.patient_id as pid, p.first_name, p.surname FROM appointments a JOIN patients p ON a.patient_id = p.id WHERE a.status = 'Pending' ORDER BY a.appointment_date ASC");
+        // Fetch pending and approved appointments
+        $app_query = $db_1->query("SELECT a.*, p.patient_id as pid, p.first_name, p.surname FROM appointments a JOIN patients p ON a.patient_id = p.id WHERE a.status IN ('Pending', 'Approved') ORDER BY a.appointment_date ASC");
         if ($app_query && $app_query->num_rows > 0) {
         ?>
-        <div style="background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; max-width: 800px; margin: 0 auto 30px auto; border: 1px solid #eee;">
-            <div style="background: linear-gradient(135deg, #1a7bb5 0%, #0F4E74 100%); padding: 20px; color: white;">
-                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 400;"><i class="bi bi-calendar-check" style="margin-right: 10px;"></i> Pending Appointments</h3>
+        <div style="background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; max-width: 850px; margin: 0 auto 30px auto; border: 1px solid #eee;">
+            <div style="background: linear-gradient(135deg, #1a7bb5 0%, #0F4E74 100%); padding: 18px 24px; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 500;"><i class="bi bi-calendar-check" style="margin-right: 10px;"></i> Scheduled Appointments Queue</h3>
+                <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px;">60-min Auto Grace Period Active</span>
             </div>
-            <table class="staff-list" style="width: 100%; border-collapse: collapse; padding: 20px;">
-                <tr>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Patient</th>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Date & Time</th>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: left;">Reason</th>
-                    <th style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">Action</th>
+            <table class="staff-list" style="width: 100%; border-collapse: collapse;">
+                <tr style="background: #f8fafc;">
+                    <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0; text-align: left; font-size: 0.85rem; color: #475569;">Patient</th>
+                    <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0; text-align: left; font-size: 0.85rem; color: #475569;">Scheduled Time</th>
+                    <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0; text-align: left; font-size: 0.85rem; color: #475569;">Reason</th>
+                    <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0; text-align: left; font-size: 0.85rem; color: #475569;">Status</th>
+                    <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0; text-align: center; font-size: 0.85rem; color: #475569;">Action</th>
                 </tr>
-                <?php while($app = $app_query->fetch_assoc()) { ?>
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo v_wrap($app['pid'] . ' - ' . $app['surname'] . ' ' . $app['first_name']); ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo date('M d, Y h:i A', strtotime($app['appointment_date'])); ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd;"><?php echo v_wrap($app['reason']); ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center; white-space: nowrap;">
-                        <button onclick="document.querySelector('select[name=patient_id]').value='<?php echo $app['patient_id']; ?>'; document.getElementById('appt_id_input').value='<?php echo $app['id']; ?>'; window.scrollTo(0, document.getElementById('check-in-form').offsetTop);" class="btn" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">
+                <?php while($app = $app_query->fetch_assoc()) { 
+                    $appt_ts = strtotime($app['appointment_date']);
+                    $is_today = date('Y-m-d', $appt_ts) === date('Y-m-d');
+                    $is_past = $appt_ts < time();
+                ?>
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 16px;">
+                        <strong style="color: #0F4E74;"><?php echo v_wrap($app['surname'] . ' ' . $app['first_name']); ?></strong>
+                        <div style="font-size: 0.8rem; color: #64748b;"><?php echo v_wrap($app['pid']); ?></div>
+                    </td>
+                    <td style="padding: 12px 16px; white-space: nowrap;">
+                        <div style="font-weight: 600; color: #1e293b;"><?php echo date('M d, Y', $appt_ts); ?></div>
+                        <div style="font-size: 0.85rem; color: #0284c7; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                            <i class="bi bi-clock"></i> <?php echo date('h:i A', $appt_ts); ?>
+                            <?php if ($is_today && $is_past) { ?>
+                                <span style="background: #fef3c7; color: #b45309; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Grace Period</span>
+                            <?php } elseif ($is_today) { ?>
+                                <span style="background: #e0f2fe; color: #0369a1; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; font-weight: 600;">Today</span>
+                            <?php } ?>
+                        </div>
+                    </td>
+                    <td style="padding: 12px 16px; font-size: 0.88rem; color: #334155;"><?php echo v_wrap($app['reason'] ?: 'Routine Consultation'); ?></td>
+                    <td style="padding: 12px 16px;">
+                        <span style="background: <?php echo $app['status'] === 'Approved' ? '#dcfce7' : '#fef9c3'; ?>; color: <?php echo $app['status'] === 'Approved' ? '#15803d' : '#854d0e'; ?>; padding: 3px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;">
+                            <?php echo v_wrap($app['status']); ?>
+                        </span>
+                    </td>
+                    <td style="padding: 12px 16px; text-align: center; white-space: nowrap;">
+                        <button onclick="document.querySelector('select[name=patient_id]').value='<?php echo $app['patient_id']; ?>'; document.getElementById('appt_id_input').value='<?php echo $app['id']; ?>'; window.scrollTo(0, document.getElementById('check-in-form').offsetTop);" class="btn" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px; font-weight: 500;">
                             <i class="bi bi-person-check"></i> Select & Assign
                         </button>
                         <form action="<?php echo url_wrap('/modules/reception/check_in.php'); ?>" method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
                             <input type="hidden" name="action" value="cancel_appointment">
                             <input type="hidden" name="cancel_appt_id" value="<?php echo $app['id']; ?>">
-                            <button type="submit" class="btn" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;" title="Cancel appointment">
+                            <button type="submit" class="btn" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;" title="Cancel appointment">
                                 <i class="bi bi-x-circle"></i> Cancel
                             </button>
                         </form>

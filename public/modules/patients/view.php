@@ -93,40 +93,26 @@ include(SHARED_PATH . '/header.php');
         </a>
 
 
-        <div class="top">
+        <?php
+        $patientImageFile = !empty($patient['profile_image']) ? PROJECT_PATH . '/public/modules/patients/images/patient_pictures/' . $patient['profile_image'] : null;
+        $hasValidImage = $patientImageFile && file_exists($patientImageFile);
+        $avatarSrc = $hasValidImage ? url_wrap('/modules/patients/images/patient_pictures/' . v_wrap(ru_wrap($patient['profile_image']))) : url_wrap('/assets/images/' . v_wrap($defaultPatientImage));
+        ?>
 
-            <p class="top-head">
-                Patient Records
-            </p>
-
-            <p class="top-description">
-                view of patient information and medical records
-            </p>
-
-            <?php if (!empty($patient['profile_image'])) { ?>
-            <img src="<?php echo url_wrap('modules/patients/images/patient_pictures/' . v_wrap(ru_wrap($patient['profile_image']))); ?>" alt="Patient profile photo" class="patient-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage)); ?>';">
-            <?php } else { ?>
-            <img src="<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage));?>" alt="No Patient photo uploaded" class="patient-profile-header">
-            <?php } ?>
-            
+        <div class="patient-view-header">
+            <div class="patient-view-header-info">
+                <p class="top-head">Patient Records</p>
+                <p class="top-description">view of patient information and medical records</p>
+                <div class="role-head">
+                    <?php echo v_wrap(trim($patient['surname'] . ' ' . $patient['first_name'] . ' ' . ($patient['middle_name'] ?? ''))); ?>'s Details
+                </div>
+            </div>
+            <div class="patient-view-header-avatar">
+                <img src="<?php echo $avatarSrc; ?>" alt="" class="patient-profile-header" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage)); ?>';">
+            </div>
         </div>
 
-
-<div><?php echo display_session_message(); ?></div>
-
-        <div class="role-head">
-
-            <?php
-            echo v_wrap(
-                $patient['surname'] . ' ' .
-                $patient['first_name'] . ' ' .
-                $patient['middle_name']
-            );
-            ?>
-
-            's Details
-
-        </div>
+        <div><?php echo display_session_message(); ?></div>
 
         
 

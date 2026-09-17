@@ -55,14 +55,57 @@
     font-size: 15px;
 }
 
+/* =========================================================
+   HEADER & AVATAR
+========================================================= */
+
+.patient-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 30px 10px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.patient-view-header-info {
+    flex: 1;
+    min-width: 260px;
+}
+
+.patient-view-header-info .top-head {
+    margin: 0;
+    font-size: 24px;
+    color: #0F4E74;
+    font-weight: 600;
+}
+
+.patient-view-header-info .top-description {
+    margin: 4px 0 10px 0;
+    color: #888;
+    font-size: 14px;
+}
+
+.patient-view-header-info .role-head {
+    margin: 0;
+    font-size: 20px;
+    color: #222;
+    font-weight: 600;
+}
+
+.patient-view-header-avatar {
+    flex-shrink: 0;
+}
+
 .patient-profile-header {
-    width: 180px;
-    height: 180px;
+    width: 100px;
+    height: 100px;
     border: 2px solid #0F4E74;
     border-radius: 50%;
     object-fit: cover;
     display: block;
     margin: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* =========================================================

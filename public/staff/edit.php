@@ -71,6 +71,7 @@ if (is_post_request()) {
   $staff["department"] = $_POST["department"] ?? "";
   $staff["profile_image"] = $new_image_name ?? $existingStaff['profile_image'];
   $staff["status"] = $_POST["status"] ?? $existingStaff['status'] ?? 'active';
+  $staff["current_shift"] = $_POST["current_shift"] ?? $existingStaff['current_shift'] ?? 'Morning';
 
   if (empty($errors)) {
     $result = update_staff($staff);
@@ -227,6 +228,18 @@ include SHARED_PATH . "/header.php";
       <select name="status" id="edit_staff_status">
         <option value="active" <?php if (strtolower($staff["status"] ?? 'active') === 'active') echo "selected"; ?>>Active</option>
         <option value="inactive" <?php if (strtolower($staff["status"] ?? '') === 'inactive') echo "selected"; ?>>Inactive</option>
+      </select>
+    </dd>
+    </dl>
+
+    <dl>
+    <dt>Assigned Shift:</dt>
+    <dd>
+      <select name="current_shift" id="edit_staff_shift">
+        <option value="Morning" <?php if (($staff["current_shift"] ?? 'Morning') === 'Morning') echo "selected"; ?>>Morning Shift (08:00 AM - 02:00 PM)</option>
+        <option value="Afternoon" <?php if (($staff["current_shift"] ?? '') === 'Afternoon') echo "selected"; ?>>Afternoon Shift (02:00 PM - 08:00 PM)</option>
+        <option value="Night" <?php if (($staff["current_shift"] ?? '') === 'Night') echo "selected"; ?>>Night Shift / Call Duty (08:00 PM - 08:00 AM)</option>
+        <option value="Off Duty" <?php if (($staff["current_shift"] ?? '') === 'Off Duty') echo "selected"; ?>>Off Duty / Standby</option>
       </select>
     </dd>
     </dl>
