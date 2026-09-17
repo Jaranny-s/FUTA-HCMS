@@ -40,6 +40,9 @@ if (!empty($patient['principal_patient_id'])) {
         $patient['principal_display'] = [
             'id' => (int)$principal['id'],
             'patient_id' => $principal['patient_id'] ?? '',
+            'surname' => $principal['surname'] ?? '',
+            'first_name' => $principal['first_name'] ?? '',
+            'middle_name' => $principal['middle_name'] ?? '',
             'full_name' => trim(($principal['surname'] ?? '') . ' ' . ($principal['first_name'] ?? '') . ' ' . ($principal['middle_name'] ?? '')),
             'staff_number' => $principal['staff_number'] ?? '',
             'department' => $principal['department'] ?? '',

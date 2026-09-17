@@ -247,11 +247,16 @@ include(SHARED_PATH . '/header.php');
 
         <div class="patient-summary-card">
             <div class="patient-info">
-                <?php if (!empty($encounter['profile_image'])) { ?>
-                    <img src="<?php echo url_wrap('modules/patients/images/patient_pictures/' . v_wrap($encounter['profile_image'])); ?>" alt="Profile" class="workspace-avatar">
-                <?php } else { ?>
-                    <img src="<?php echo url_wrap('/assets/images/default_profile_pic.png'); ?>" alt="Default" class="workspace-avatar">
-                <?php } ?>
+                <?php 
+                $patient_pic = url_wrap('/assets/images/default_profile_pic.png');
+                if (!empty($encounter['profile_image']) && $encounter['profile_image'] !== 'default_profile_pic.png') {
+                    $pic_file = dirname(__DIR__) . '/patients/images/patient_pictures/' . $encounter['profile_image'];
+                    if (file_exists($pic_file)) {
+                        $patient_pic = url_wrap('/modules/patients/images/patient_pictures/' . v_wrap($encounter['profile_image']));
+                    }
+                }
+                ?>
+                <img src="<?php echo $patient_pic; ?>" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/default_profile_pic.png'); ?>';" alt="" class="workspace-avatar">
                 <div class="details">
                     <h2><?php echo v_wrap($encounter['patient_last'] . ' ' . $encounter['patient_first']); ?> <span style="font-size: 14px; color: #666;">(<?php echo v_wrap($encounter['p_id']); ?>)</span></h2>
                     <p>
@@ -262,14 +267,17 @@ include(SHARED_PATH . '/header.php');
                     </p>
                 </div>
             </div>
+            
             <div class="encounter-status" style="display: flex; flex-direction: column; align-items: flex-end;">
                 <div>
                     <span class="badge status-<?php echo str_replace(' ', '-', strtolower($encounter['status'])); ?>">
                         Status: <?php echo v_wrap($encounter['status']); ?>
                     </span>
-                <div style="margin-top: 10px; text-align: right; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                </div>
+                
+                <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <?php if ($is_encounter_active && ($is_assigned_doctor || $is_privileged)) { ?>
-                    <button type="button" onclick="openReassignModal()" class="btn" style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 9px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" onclick="openReassignModal()" class="btn" style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
                         <i class="bi bi-arrow-left-right"></i> Transfer / Reassign
                     </button>
                     <?php } ?>
@@ -278,28 +286,31 @@ include(SHARED_PATH . '/header.php');
                         <?php if ($can_complete_encounter) { ?>
                         <form action="<?php echo url_wrap("/modules/encounters/view.php?id={$encounter_id}"); ?>" method="post" style="display:inline-block; margin: 0;">
                             <input type="hidden" name="action" value="complete_encounter">
-                            <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:9px 18px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.92rem; box-shadow:0 3px 6px rgba(27,192,61,0.25);">
+                            <button type="submit" class="btn btn-success" style="background:#1bc03d; color:white; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.92rem; box-shadow:0 3px 6px rgba(27,192,61,0.25);">
                                 <i class="bi bi-check-circle-fill"></i> Complete Encounter
                             </button>
                         </form>
-                    <?php } else { ?>
-                    <button type="button" class="btn" disabled style="background:#f1f3f5; color:#868e96; border:1px solid #ced4da; padding:8px 16px; border-radius:6px; cursor:not-allowed; font-size:0.9rem; font-weight:500;" title="Complete all clinical prerequisites to enable">
-                        <i class="bi bi-lock-fill"></i> Complete Encounter
-                    </button>
-                    <div style="font-size: 0.78rem; margin-top: 6px; color: #555; text-align: right;">
-                        <span style="font-weight:600; color:#444;">Required to complete:</span><br>
-                        <span style="color: <?php echo $has_vitals_nursing ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
-                            <i class="bi <?php echo $has_vitals_nursing ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Vitals & Nursing
-                        </span> &bull; 
-                        <span style="color: <?php echo $has_consultation ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
-                            <i class="bi <?php echo $has_consultation ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Consultation
-                        </span> &bull; 
-                        <span style="color: <?php echo $has_diagnosis ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
-                            <i class="bi <?php echo $has_diagnosis ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Diagnosis
-                        </span>
-                        <div style="font-size:0.72rem; color:#888; margin-top:2px;">(Prescription is optional)</div>
-                    </div>
+                        <?php } else { ?>
+                        <button type="button" class="btn" disabled style="background:#f1f3f5; color:#868e96; border:1px solid #ced4da; padding:8px 16px; border-radius:6px; cursor:not-allowed; font-size:0.9rem; font-weight:500;" title="Complete all clinical prerequisites to enable">
+                            <i class="bi bi-lock-fill"></i> Complete Encounter
+                        </button>
+                        <?php } ?>
                     <?php } ?>
+                </div>
+
+                <?php if ($encounter['status'] !== 'Completed' && $can_write_clinical && !$can_complete_encounter) { ?>
+                <div style="font-size: 0.78rem; margin-top: 6px; color: #555; text-align: right;">
+                    <span style="font-weight:600; color:#444;">Required to complete:</span><br>
+                    <span style="color: <?php echo $has_vitals_nursing ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
+                        <i class="bi <?php echo $has_vitals_nursing ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Vitals & Nursing
+                    </span> &bull; 
+                    <span style="color: <?php echo $has_consultation ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
+                        <i class="bi <?php echo $has_consultation ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Consultation
+                    </span> &bull; 
+                    <span style="color: <?php echo $has_diagnosis ? '#198754' : '#dc3545'; ?>; font-weight: 500;">
+                        <i class="bi <?php echo $has_diagnosis ? 'bi-check-circle-fill' : 'bi-x-circle'; ?>"></i> Diagnosis
+                    </span>
+                    <div style="font-size:0.72rem; color:#888; margin-top:2px;">(Prescription is optional)</div>
                 </div>
                 <?php } ?>
             </div>

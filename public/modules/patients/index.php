@@ -1050,13 +1050,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
             function setPrincipal(p) {
                 hiddenInput.value = p.id;
-                if (nameEl) nameEl.textContent = `${p.surname} ${p.first_name} ${p.middle_name || ''}`;
+                const displayName = p.full_name || `${p.surname || ''} ${p.first_name || ''} ${p.middle_name || ''}`.trim() || 'Principal Staff';
+                if (nameEl) nameEl.textContent = displayName;
                 if (metaEl) metaEl.textContent = `Staff ID: ${p.staff_number || p.patient_id || 'N/A'} | Dept: ${p.department || 'N/A'}`;
                 if (avatar) {
-                    const imgSrc = p.profile_image 
+                    const imgSrc = (p.profile_image && p.profile_image !== 'default_profile_pic.png') 
                         ? `<?php echo url_wrap('/modules/patients/images/patient_pictures/'); ?>${encodeURIComponent(p.profile_image)}`
                         : `<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage)); ?>`;
                     avatar.src = imgSrc;
+                    avatar.alt = "";
                     avatar.onerror = function() {
                         this.onerror = null;
                         this.src = `<?php echo url_wrap('/assets/images/' . v_wrap($defaultPatientImage)); ?>`;
