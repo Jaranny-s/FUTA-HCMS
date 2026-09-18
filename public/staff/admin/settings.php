@@ -27,6 +27,27 @@ if (is_post_request()) {
                 $errors[] = "Failed to advance academic session: " . ($result['error'] ?? 'Unknown error');
             }
         }
+    } elseif ($action === 'update_supervisor_pin') {
+        $pin = trim($_POST['supervisor_pin'] ?? '');
+        $pin_confirm = trim($_POST['supervisor_pin_confirm'] ?? '');
+        $current_pwd = trim($_POST['current_password'] ?? '');
+        $staff_id = $_SESSION['staff_id'] ?? 0;
+        $admin_staff = find_staff_by_id($staff_id);
+
+        if (!$admin_staff || !password_verify($current_pwd, $admin_staff['password'] ?? '')) {
+            $errors[] = "Incorrect current password. Please enter your account login password to set a new PIN.";
+        } elseif (!preg_match('/^\d{4,6}$/', $pin)) {
+            $errors[] = "Supervisor PIN must be between 4 and 6 numeric digits.";
+        } elseif ($pin !== $pin_confirm) {
+            $errors[] = "PIN confirmation does not match.";
+        } else {
+            if (set_staff_reverification_pin($staff_id, $pin)) {
+                set_session_message("Supervisor Authorization PIN updated successfully.", "success");
+                redirect_to(url_wrap('/staff/admin/settings.php'));
+            } else {
+                $errors[] = "Failed to update supervisor PIN.";
+            }
+        }
     } else {
         $hospital_name = trim($_POST['hospital_name'] ?? '');
     $contact_email = trim($_POST['contact_email'] ?? '');
@@ -216,6 +237,58 @@ include(SHARED_PATH . '/header.php');
 
         </div>
     </form>
+
+    <?php 
+    $has_pin = has_staff_reverification_pin($_SESSION['staff_id'] ?? 0);
+    ?>
+    <!-- Supervisor Authorization PIN Card -->
+    <div style="margin-top: 30px; background: white; border-radius: 12px; border: 1px solid #e1e8ed; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h3 style="color: #0F4E74; margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="bi bi-shield-lock-fill" style="color: #0F4E74;"></i> Supervisor Authorization PIN (Break-Glass Override)
+                </h3>
+                <p style="color: #64748b; font-size: 0.88rem; margin: 5px 0 0 0;">
+                    Used for sensitive clinical overrides such as reassigning patient encounters and voiding clinical visits.
+                </p>
+            </div>
+            <div>
+                <?php if ($has_pin): ?>
+                <span style="background: #dcfce7; color: #15803d; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="bi bi-check-circle-fill"></i> PIN Active
+                </span>
+                <?php else: ?>
+                <span style="background: #fef3c7; color: #b45309; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="bi bi-exclamation-circle-fill"></i> Fallback to Password
+                </span>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <form action="<?php echo url_wrap('/staff/admin/settings.php'); ?>" method="POST" style="max-width: 620px;">
+            <input type="hidden" name="action" value="update_supervisor_pin">
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">Your Account Login Password *</label>
+                <input type="password" name="current_password" required placeholder="Enter your current password to verify identity" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">New 4-to-6 Digit PIN *</label>
+                    <input type="password" name="supervisor_pin" maxlength="6" pattern="\d{4,6}" inputmode="numeric" required placeholder="e.g. 1234" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; letter-spacing: 2px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">Confirm New PIN *</label>
+                    <input type="password" name="supervisor_pin_confirm" maxlength="6" pattern="\d{4,6}" inputmode="numeric" required placeholder="Re-enter PIN" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; letter-spacing: 2px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <button type="submit" class="btn" style="background: #0F4E74; color: white; border: none; padding: 10px 22px; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-key-fill"></i> <?php echo $has_pin ? 'Update Supervisor PIN' : 'Set Supervisor PIN'; ?>
+            </button>
+        </form>
+    </div>
 
     <!-- Academic Session & Student Lifecycle Management Card -->
     <div style="margin-top: 30px; background: white; border-radius: 12px; border: 1px solid #e1e8ed; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">

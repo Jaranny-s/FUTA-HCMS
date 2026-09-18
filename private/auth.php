@@ -16,18 +16,21 @@
     return true;
   }
 
-// Performs all actions necessary to log out an staff
-  function log_out_staff($staff) {
+// Performs all actions necessary to log out a staff member
+  function log_out_staff($staff = null) {
+    $actorId = $_SESSION['staff_id'] ?? ($staff['id'] ?? null);
+    $entityId = ($staff && isset($staff['id'])) ? $staff['id'] : $actorId;
       
-    $actorId = $_SESSION['staff_id'] ?? $staff['id']; // fallback if no login yet
-    logAction($actorId, 'LOGOUT', 'staff', $staff['id']);
+    if ($actorId) {
+        logAction($actorId, 'LOGOUT', 'staff', $entityId);
+    }
 
     unset($_SESSION['staff_id']);
     unset($_SESSION['last_login']);
     unset($_SESSION['email']);
     unset($_SESSION['role_id']);
     unset($_SESSION['staff_role']);
-    // session_destroy(); // optional: destroys the whole session;
+    session_destroy();
     return true;
   }
 
@@ -119,5 +122,63 @@ function hasPermission($permissionName) {
     $result = $query->get_result();
 
     return $result->num_rows > 0;
+}
+
+/**
+ * Sets a 4-to-6 digit Supervisor Reverification PIN for break-glass actions.
+ */
+function set_staff_reverification_pin($staff_id, $pin) {
+    global $db_1;
+    $clean_pin = trim($pin);
+    if (!preg_match('/^\d{4,6}$/', $clean_pin)) {
+        return false;
+    }
+    $hashed = password_hash($clean_pin, PASSWORD_BCRYPT);
+    $stmt = $db_1->prepare("UPDATE staff SET reverification_pin = ? WHERE id = ?");
+    $stmt->bind_param("si", $hashed, $staff_id);
+    $success = $stmt->execute();
+    $stmt->close();
+
+    if ($success && function_exists('logAction')) {
+        logAction($staff_id, 'SET_REVERIFICATION_PIN', 'staff', $staff_id);
+    }
+    return $success;
+}
+
+/**
+ * Verifies a 4-to-6 digit Supervisor Reverification PIN.
+ * Falls back to account login password if PIN has not yet been configured.
+ */
+function verify_staff_reverification_pin($staff_id, $pin) {
+    global $db_1;
+    $stmt = $db_1->prepare("SELECT reverification_pin, password FROM staff WHERE id = ? LIMIT 1");
+    $stmt->bind_param("i", $staff_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res->fetch_assoc();
+    $stmt->close();
+
+    if (!$row) return false;
+
+    if (!empty($row['reverification_pin'])) {
+        return password_verify(trim($pin), $row['reverification_pin']);
+    }
+
+    // Fallback: If PIN not set, verify against login password
+    return password_verify(trim($pin), $row['password']);
+}
+
+/**
+ * Checks if a staff member has configured their Reverification PIN.
+ */
+function has_staff_reverification_pin($staff_id) {
+    global $db_1;
+    $stmt = $db_1->prepare("SELECT reverification_pin FROM staff WHERE id = ? LIMIT 1");
+    $stmt->bind_param("i", $staff_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res->fetch_assoc();
+    $stmt->close();
+    return !empty($row['reverification_pin']);
 }
 ?>

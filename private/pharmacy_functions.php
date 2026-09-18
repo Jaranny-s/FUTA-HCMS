@@ -156,6 +156,12 @@ function dispense_prescription($prescription_id, $pharmacist_id, $quantity, $rem
         $q3->close();
     }
     
+    if (function_exists('logAction')) {
+        $actor = $pharmacist_id ?? ($_SESSION['staff_id'] ?? 1);
+        $medName = $rx['drug_name'] ?? 'medication';
+        logAction($actor, "Dispensed prescription #{$prescription_id} ({$quantity}x {$medName})", 'prescription', $prescription_id);
+    }
+    
     return true;
 }
 

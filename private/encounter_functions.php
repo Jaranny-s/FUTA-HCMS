@@ -44,6 +44,11 @@ function create_encounter($patient_id, $doctor_id, $appointment_id, $priority, $
         $query_app->close();
     }
     
+    if ($new_id && function_exists('logAction')) {
+        $actor = $created_by ?? ($_SESSION['staff_id'] ?? 1);
+        logAction($actor, "Created Encounter {$encounter_number}", 'encounter', $new_id);
+    }
+    
     return $new_id;
 }
 
@@ -154,6 +159,11 @@ function update_encounter_status($id, $status) {
         $app_q->close();
     }
 
+    if ($affected && $status === 'Completed' && function_exists('logAction')) {
+        $actor = $_SESSION['staff_id'] ?? 1;
+        logAction($actor, "Completed Encounter #{$id}", 'encounter', $id);
+    }
+
     return $affected;
 }
 
@@ -181,8 +191,9 @@ function cancel_encounter($id, $reason, $staff_id = null) {
     }
     $app_q->close();
 
-    if (function_exists('log_action') && $staff_id) {
-        log_action($staff_id, 'Cancel Encounter', "Encounter #{$id} was cancelled. Reason: {$reason}");
+    if (function_exists('logAction')) {
+        $actor = $staff_id ?? ($_SESSION['staff_id'] ?? 1);
+        logAction($actor, "Voided Encounter #{$id}. Reason: {$reason}", 'encounter', $id);
     }
 
     return $affected;
@@ -399,7 +410,7 @@ function reassign_encounter($encounter_id, $new_doctor_id, $reason, $reassigned_
 
     if ($success && function_exists('logAction')) {
         $staff_id = $reassigned_by_staff_id ?? ($_SESSION['staff_id'] ?? 1);
-        logAction($staff_id, "Reassigned Encounter {$enc['encounter_number']} from Doctor #{$old_doc} to Doctor #{$new_doc}. Reason: {$reason}", 'encounters', $enc_id);
+        logAction($staff_id, "Reassigned Encounter {$enc['encounter_number']} from Doctor #{$old_doc} to Doctor #{$new_doc}. Reason: {$reason}", 'encounter', $enc_id);
     }
     return $success;
 }

@@ -101,8 +101,10 @@ include(SHARED_PATH . '/header.php');
 
         <div class="patient-view-header">
             <div class="patient-view-header-info">
-                <p class="top-head">Patient Records</p>
-                <p class="top-description">view of patient information and medical records</p>
+                <div class="top" style="margin-bottom: 8px;">
+                    <p class="top-head">Patient Records</p>
+                    <p class="top-description">view of patient information and medical records</p>
+                </div>
                 <div class="role-head">
                     <?php echo v_wrap(trim($patient['surname'] . ' ' . $patient['first_name'] . ' ' . ($patient['middle_name'] ?? ''))); ?>'s Details
                 </div>

@@ -73,23 +73,14 @@
     min-width: 260px;
 }
 
-.patient-view-header-info .top-head {
-    margin: 0;
-    font-size: 24px;
-    color: #0F4E74;
-    font-weight: 600;
-}
-
-.patient-view-header-info .top-description {
-    margin: 4px 0 10px 0;
-    color: #888;
-    font-size: 14px;
+.patient-view-header-info .top {
+    margin-bottom: 8px;
 }
 
 .patient-view-header-info .role-head {
     margin: 0;
     font-size: 20px;
-    color: #222;
+    color: #333;
     font-weight: 600;
 }
 
@@ -98,14 +89,14 @@
 }
 
 .patient-profile-header {
-    width: 100px;
-    height: 100px;
-    border: 2px solid #0F4E74;
+    width: 150px;
+    height: 150px;
+    border: 3px solid #0F4E74;
     border-radius: 50%;
     object-fit: cover;
     display: block;
     margin: 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* =========================================================

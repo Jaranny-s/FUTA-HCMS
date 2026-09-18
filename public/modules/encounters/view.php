@@ -107,6 +107,13 @@ if (is_post_request()) {
             $_SESSION['message'] = "Encounter marked as Completed successfully.";
         }
     } elseif ($action === 'reassign_encounter') {
+        if ($is_privileged) {
+            $pin = trim($_POST['supervisor_pin'] ?? '');
+            if (empty($pin) || !verify_staff_reverification_pin($staff_id, $pin)) {
+                $_SESSION['error'] = "Authorization failed: Invalid supervisor PIN or password.";
+                redirect_to(url_wrap("/modules/encounters/view.php?id={$encounter_id}"));
+            }
+        }
         $target_doctor_id = (int)($_POST['target_doctor_id'] ?? 0);
         $reason_cat = trim($_POST['reassign_reason'] ?? '');
         $notes = trim($_POST['reassign_notes'] ?? '');
@@ -134,6 +141,13 @@ if (is_post_request()) {
             }
         }
     } elseif ($action === 'cancel_encounter') {
+        if ($is_privileged) {
+            $pin = trim($_POST['supervisor_pin'] ?? '');
+            if (empty($pin) || !verify_staff_reverification_pin($staff_id, $pin)) {
+                $_SESSION['error'] = "Authorization failed: Invalid supervisor PIN or password.";
+                redirect_to(url_wrap("/modules/encounters/view.php?id={$encounter_id}"));
+            }
+        }
         $category = trim($_POST['cancel_category'] ?? '');
         $notes = trim($_POST['cancel_notes'] ?? '');
         $full_reason = $category . (!empty($notes) ? " - " . $notes : "");
@@ -277,7 +291,7 @@ include(SHARED_PATH . '/header.php');
                 
                 <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <?php if ($is_encounter_active && ($is_assigned_doctor || $is_privileged)) { ?>
-                    <button type="button" onclick="openReassignModal()" class="btn" style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" data-modal-target="reassignEncounterModal" onclick="openReassignModal()" class="btn" style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
                         <i class="bi bi-arrow-left-right"></i> Transfer / Reassign
                     </button>
                     <?php } ?>
@@ -660,6 +674,16 @@ include(SHARED_PATH . '/header.php');
                         <textarea name="cancel_notes" rows="3" placeholder="e.g. Student had to leave for lecture before consultation; vitals were normal." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
                     </div>
 
+                    <?php if ($is_privileged): ?>
+                    <div style="margin-bottom: 18px; padding: 12px; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 6px;">
+                        <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; color: #742a2a;">
+                            <i class="bi bi-shield-lock-fill" style="color: #c53030;"></i> Supervisor Authorization PIN *
+                        </label>
+                        <p style="font-size: 0.78rem; color: #9b2c2c; margin-top: 0; margin-bottom: 8px;">Enter your 4-digit supervisor PIN (or account password) to authorize voiding this clinical encounter.</p>
+                        <input type="password" name="supervisor_pin" maxlength="30" required placeholder="Enter 4-digit PIN" style="width: 100%; padding: 8px 12px; border: 1px solid #feb2b2; border-radius: 6px; font-size: 0.9rem; letter-spacing: 2px;">
+                    </div>
+                    <?php endif; ?>
+
                     <div style="margin-bottom: 20px; display: flex; align-items: flex-start; gap: 8px;">
                         <input type="checkbox" id="confirm_void_chk" required onchange="document.getElementById('void_submit_btn').disabled = !this.checked;" style="margin-top: 3px;">
                         <label for="confirm_void_chk" style="font-size: 0.85rem; color: #444; cursor: pointer;">
@@ -677,10 +701,10 @@ include(SHARED_PATH . '/header.php');
         
         <?php if ($is_encounter_active && ($is_assigned_doctor || $is_privileged)) { ?>
         <!-- Transfer / Reassign Encounter Modal -->
-        <div id="reassignEncounterModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
-            <div class="modal-content" style="background: #fff; width: 95%; max-width: 540px; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); text-align: left; position: relative;">
-                <button type="button" onclick="closeReassignModal()" style="position: absolute; right: 18px; top: 16px; background: none; border: none; font-size: 1.5rem; color: #888; cursor: pointer;">&times;</button>
-                <h3 style="color: #0d6efd; margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+        <div id="reassignEncounterModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 540px; text-align: left;">
+                <button type="button" class="modal-close" data-modal-close onclick="closeReassignModal()">&times;</button>
+                <h3 class="modal-title" style="color: #0d6efd; margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                     <i class="bi bi-arrow-left-right"></i> Transfer / Handover Patient
                 </h3>
                 
@@ -720,13 +744,23 @@ include(SHARED_PATH . '/header.php');
                         </select>
                     </div>
 
-                    <div style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 15px;">
                         <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #333;">Handover Notes for Receiving Doctor (Optional)</label>
                         <textarea name="reassign_notes" rows="3" placeholder="e.g. Patient presents with acute abdominal pain; vitals stable. Handing over as shift ends." style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.88rem; box-sizing: border-box;"></textarea>
                     </div>
 
+                    <?php if ($is_privileged): ?>
+                    <div style="margin-bottom: 18px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                        <label style="display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; color: #1e293b;">
+                            <i class="bi bi-shield-lock-fill" style="color: #0F4E74;"></i> Supervisor Authorization PIN *
+                        </label>
+                        <p style="font-size: 0.78rem; color: #64748b; margin-top: 0; margin-bottom: 8px;">Enter your 4-digit supervisor PIN (or account password) to authorize this override.</p>
+                        <input type="password" name="supervisor_pin" maxlength="30" required placeholder="Enter 4-digit PIN" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; letter-spacing: 2px;">
+                    </div>
+                    <?php endif; ?>
+
                     <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" onclick="closeReassignModal()" style="padding: 10px 18px; border: 1px solid #ccc; background: #fff; border-radius: 6px; cursor: pointer; font-weight: 500;">Cancel</button>
+                        <button type="button" class="btn" data-modal-close onclick="closeReassignModal()" style="padding: 10px 18px; border: 1px solid #ccc; background: #fff; border-radius: 6px; cursor: pointer; font-weight: 500;">Cancel</button>
                         <button type="submit" style="padding: 10px 20px; border: none; background: #0d6efd; color: #fff; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                             <i class="bi bi-arrow-left-right"></i> Confirm Transfer
                         </button>
@@ -737,11 +771,11 @@ include(SHARED_PATH . '/header.php');
         <script>
         function openReassignModal() {
             var m = document.getElementById('reassignEncounterModal');
-            if (m) m.style.display = 'flex';
+            if (m) m.classList.add('active');
         }
         function closeReassignModal() {
             var m = document.getElementById('reassignEncounterModal');
-            if (m) m.style.display = 'none';
+            if (m) m.classList.remove('active');
         }
         </script>
         <?php } ?>

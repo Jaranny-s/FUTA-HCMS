@@ -161,7 +161,7 @@ include(SHARED_PATH . '/header.php'); ?>
     <?php
     $my_enc_count = 0;
     if (isset($_SESSION['staff_id'])) {
-        $chk_stmt = $db_1->prepare("SELECT COUNT(*) FROM encounters WHERE doctor_id = ?");
+        $chk_stmt = $db_1->prepare("SELECT COUNT(*) FROM encounters WHERE doctor_id = ? AND status IN ('Waiting', 'In Progress')");
         $chk_stmt->bind_param("i", $_SESSION['staff_id']);
         $chk_stmt->execute();
         $chk_stmt->bind_result($my_enc_count);
@@ -171,7 +171,7 @@ include(SHARED_PATH . '/header.php'); ?>
     ?>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
       <?php if ($my_enc_count > 0): ?>
-      <a href="<?php echo url_wrap('/modules/encounters/index.php?mine=1'); ?>" style="text-decoration:none; background: #0F4E74; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(15,78,116,0.3); transition: 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
+      <a href="<?php echo url_wrap('/modules/encounters/index.php?scope=mine&status=Active'); ?>" style="text-decoration:none; background: #0F4E74; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(15,78,116,0.3); transition: 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
         <i class="bi bi-heart-pulse" style="font-size: 2rem; color: white;"></i>
         <p style="margin: 8px 0 0; font-weight: 600; color: white;">My Encounters (<?php echo $my_enc_count; ?>)</p>
         <p style="margin: 4px 0 0; font-size: 0.8rem; color: rgba(255,255,255,0.8);">Active consultations</p>
