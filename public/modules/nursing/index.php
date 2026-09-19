@@ -11,7 +11,22 @@ if (!isset($_SESSION['staff_role']) || !in_array($_SESSION['staff_role'], $_allo
 $page_title = 'Nursing Station Queue';
 $specificCss = '/assets/css/encounters.css';
 
-$encounters = find_all_encounters('Waiting'); // Nurses only need to see waiting patients
+$waiting_count = 0;
+$in_prog_count = 0;
+$c_wait = $db_1->query("SELECT COUNT(*) as c FROM encounters WHERE status = 'Waiting'");
+if ($c_wait) $waiting_count = (int)$c_wait->fetch_assoc()['c'];
+$c_prog = $db_1->query("SELECT COUNT(*) as c FROM encounters WHERE status = 'In Progress'");
+if ($c_prog) $in_prog_count = (int)$c_prog->fetch_assoc()['c'];
+
+$tab = $_GET['tab'] ?? 'waiting';
+if ($tab === 'in_progress') {
+    $encounters = find_all_encounters('In Progress');
+} elseif ($tab === 'all_active') {
+    $encounters = find_all_encounters('Active');
+} else {
+    $tab = 'waiting';
+    $encounters = find_all_encounters('Waiting');
+}
 
 include(SHARED_PATH . '/header.php'); 
 ?>
@@ -22,13 +37,21 @@ include(SHARED_PATH . '/header.php');
     
     <div class="top">
         <p class="top-head">Nursing Station</p> 
-        <p class="top-description">Manage patients waiting for vitals and initial assessment.</p>
+        <p class="top-description">Manage patients waiting for vitals, review triage, and record nursing notes.</p>
     </div>
 
     <div><?php echo display_session_message(); ?></div>
 
     <div class="tabs" role="tablist">
-        <a href="#" class="tab-btn active" style="text-decoration:none;">Waiting (Nurse Queue)</a>
+        <a href="?tab=waiting" class="tab-btn <?php if($tab === 'waiting') echo 'active'; ?>" style="text-decoration:none;">
+            Awaiting Vitals (<?php echo $waiting_count; ?>)
+        </a>
+        <a href="?tab=in_progress" class="tab-btn <?php if($tab === 'in_progress') echo 'active'; ?>" style="text-decoration:none;">
+            In Consultation / Today's Triage (<?php echo $in_prog_count; ?>)
+        </a>
+        <a href="?tab=all_active" class="tab-btn <?php if($tab === 'all_active') echo 'active'; ?>" style="text-decoration:none;">
+            All Active (<?php echo $waiting_count + $in_prog_count; ?>)
+        </a>
     </div>
 
     <div class="encounter-list-container">
@@ -42,28 +65,37 @@ include(SHARED_PATH . '/header.php');
                 <th>Time Arrived</th>
                 <th>Action</th>
             </tr>
-            <?php while($e = $encounters->fetch_assoc()) { ?>
-            <tr>
-                <td><?php echo v_wrap($e['encounter_number']); ?></td>
-                <td><?php echo v_wrap($e['p_id'] . ' - ' . $e['patient_last'] . ' ' . $e['patient_first']); ?></td>
-                <td><?php echo v_wrap($e['doctor_name']); ?></td>
-                <td>
-                    <span class="badge priority-<?php echo strtolower($e['priority']); ?>">
-                        <?php echo v_wrap($e['priority']); ?>
-                    </span>
-                </td>
-                <td>
-                    <span class="badge status-<?php echo str_replace(' ', '-', strtolower($e['status'])); ?>">
-                        <?php echo v_wrap($e['status']); ?>
-                    </span>
-                </td>
-                <td><?php echo date('h:i A', strtotime($e['created_at'])); ?></td>
-                <td>
-                    <a class="view-staff" style="background:#0F4E74; color:white; padding:5px 10px; border-radius:4px; text-decoration:none;" href="<?php echo url_wrap('/modules/encounters/view.php?id=' . u_wrap($e['id'])); ?>">
-                        Open Workspace <i class="bi bi-box-arrow-in-right"></i>
-                    </a>
-                </td>
-            </tr>
+            <?php if ($encounters && $encounters->num_rows > 0) { ?>
+                <?php while($e = $encounters->fetch_assoc()) { ?>
+                <tr>
+                    <td><?php echo v_wrap($e['encounter_number']); ?></td>
+                    <td><?php echo v_wrap($e['p_id'] . ' - ' . $e['patient_last'] . ' ' . $e['patient_first']); ?></td>
+                    <td><?php echo v_wrap($e['doctor_name']); ?></td>
+                    <td>
+                        <span class="badge priority-<?php echo strtolower($e['priority']); ?>">
+                            <?php echo v_wrap($e['priority']); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge status-<?php echo str_replace(' ', '-', strtolower($e['status'])); ?>">
+                            <?php echo v_wrap($e['status']); ?>
+                        </span>
+                    </td>
+                    <td><?php echo date('h:i A', strtotime($e['created_at'])); ?></td>
+                    <td>
+                        <a class="view-staff" style="background:#0F4E74; color:white; padding:5px 10px; border-radius:4px; text-decoration:none;" href="<?php echo url_wrap('/modules/encounters/view.php?id=' . u_wrap($e['id'])); ?>">
+                            Open Workspace <i class="bi bi-box-arrow-in-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                <?php } ?>
+            <?php } else { ?>
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:35px; color:#888;">
+                        <i class="bi bi-inbox" style="font-size:2rem; display:block; margin-bottom:8px; color:#cbd5e1;"></i>
+                        No patients currently in this queue.
+                    </td>
+                </tr>
             <?php } ?>
         </table>
     </div>

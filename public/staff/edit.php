@@ -65,8 +65,8 @@ if (is_post_request()) {
   $staff["id"] = $id;
   $staff["full_name"] = $_POST["full_name"] ?? "";
   $staff["email"] = $_POST["email"] ?? "";
-  $staff["hashed_password"] = $_POST["password"] ?? "";
-  $staff["confirm_password"] = $_POST["confirm_password"] ?? "";
+  $staff["hashed_password"] = "";
+  $staff["confirm_password"] = "";
   $staff["role"] = $_POST["role"] ?? "";
   $staff["department"] = $_POST["department"] ?? "";
   $staff["profile_image"] = $new_image_name ?? $existingStaff['profile_image'];
@@ -156,18 +156,6 @@ include SHARED_PATH . "/header.php";
     <dt>Email:</dt>
     <dd><input type="email" name="email" value="<?php echo v_wrap($staff["email"]); ?>" /></dd>
     </dl>
-    
-    <dl>
-    <dt>Password:</dt>
-    <dd><input type="password" name="password" value="" placeholder="Type new password here(optional)" /></dd>
-    </dl>
-       
-    <dl>
-    <dt>Confirm Password:</dt>
-    <dd><input type="password" name="confirm_password" value="" placeholder="Confirm password if typed above." /></dd>
-    </dl>
-     
-         <p>Passwords should be at least 12 characters and include at least one UPPERCASE letter, one lowercase letter, 1 number and one $ymbol. </p>
         
     <dl>
         <dt>Role</dt>

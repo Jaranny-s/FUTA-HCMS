@@ -224,6 +224,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		<button id="filterBtn" type="submit">Filter</button></div>
 	</form> 
        
+    <div class="table-responsive">
     <table class="staff-list">
   	  <tr>
         <th>Photo</th>
@@ -275,6 +276,7 @@ document.addEventListener("DOMContentLoaded", function() {
     	  </tr>
       <?php } // close while statement ?>
        </table>
+    </div>
        
        
   </div>
@@ -318,6 +320,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	</div>
 	</form> 
       
+   <div class="table-responsive">
    <table class="staff-list">
   	  <tr>
         <th>Photo</th>
@@ -396,6 +399,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <?php } // close while statement ?>
 
        </table>
+   </div>
   </div>
     
     
@@ -431,6 +435,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		<button id="filterBtn" type="submit">Filter</button></div>
 	</form> 
       
+    <div class="table-responsive">
     <table class="staff-list">
   	  <tr>
         <th>Photo</th>
@@ -478,6 +483,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <?php } // close while statement ?>
 
        </table>
+    </div>
   </div>
     
   
@@ -514,6 +520,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		<button id="filterBtn" type="submit">Filter</button></div>
 	</form> 
       
+    <div class="table-responsive">
     <table class="staff-list">
   	  <tr>
         <th>Photo</th>
@@ -561,6 +568,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <?php } // close while statement ?>
 
        </table>
+    </div>
   </div>
     
     
@@ -596,6 +604,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		<button id="filterBtn" type="submit">Filter</button></div>
 	</form> 
       
+    <div class="table-responsive">
     <table class="staff-list">
   	  <tr>
         <th>Photo</th>
@@ -643,6 +652,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <?php } // close while statement ?>
 
        </table>
+    </div>
   </div>
     
     <div style="margin-top:20px; text-align: center;">

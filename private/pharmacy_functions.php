@@ -40,11 +40,17 @@ function update_inventory_stock($id, $stock_change) {
 
 function get_all_prescriptions($status = null) {
     global $db_1;
-    $sql = "SELECT pr.*, e.encounter_number, e.patient_id, p.first_name, p.surname, p.patient_category, d.full_name as doctor_name, COALESCE(NULLIF(pr.medication_name, ''), inv.drug_name, 'Prescribed Medication') as drug_name, inv.unit_price ";
+    $sql = "SELECT pr.*, 
+                   COALESCE(e.encounter_number, 'Walk-In / External') as encounter_number,
+                   COALESCE(pr.patient_id, e.patient_id) as resolved_patient_id,
+                   p.first_name, p.surname, p.patient_category,
+                   COALESCE(d.full_name, pr.external_prescriber, 'External Prescriber') as doctor_name,
+                   COALESCE(NULLIF(pr.medication_name, ''), inv.drug_name, 'Prescribed Medication') as drug_name,
+                   inv.unit_price ";
     $sql .= "FROM prescriptions pr ";
-    $sql .= "JOIN encounters e ON pr.encounter_id = e.id ";
-    $sql .= "JOIN patients p ON e.patient_id = p.id ";
-    $sql .= "JOIN staff d ON pr.doctor_id = d.id ";
+    $sql .= "LEFT JOIN encounters e ON pr.encounter_id = e.id ";
+    $sql .= "LEFT JOIN patients p ON (pr.patient_id = p.id OR (pr.patient_id IS NULL AND e.patient_id = p.id)) ";
+    $sql .= "LEFT JOIN staff d ON pr.doctor_id = d.id ";
     $sql .= "LEFT JOIN pharmacy_inventory inv ON pr.inventory_id = inv.id ";
     
     if ($status) {
@@ -63,11 +69,17 @@ function get_all_prescriptions($status = null) {
 
 function get_prescription_details($id) {
     global $db_1;
-    $sql = "SELECT pr.*, e.encounter_number, e.patient_id as e_patient_id, p.first_name, p.surname, p.patient_category, d.full_name as doctor_name, COALESCE(NULLIF(pr.medication_name, ''), inv.drug_name, 'Prescribed Medication') as drug_name, inv.unit_price, inv.stock_quantity ";
+    $sql = "SELECT pr.*, 
+                   COALESCE(e.encounter_number, 'Walk-In / External') as encounter_number,
+                   COALESCE(pr.patient_id, e.patient_id) as e_patient_id,
+                   p.first_name, p.surname, p.patient_category,
+                   COALESCE(d.full_name, pr.external_prescriber, 'External Prescriber') as doctor_name,
+                   COALESCE(NULLIF(pr.medication_name, ''), inv.drug_name, 'Prescribed Medication') as drug_name,
+                   inv.unit_price, inv.stock_quantity ";
     $sql .= "FROM prescriptions pr ";
-    $sql .= "JOIN encounters e ON pr.encounter_id = e.id ";
-    $sql .= "JOIN patients p ON e.patient_id = p.id ";
-    $sql .= "JOIN staff d ON pr.doctor_id = d.id ";
+    $sql .= "LEFT JOIN encounters e ON pr.encounter_id = e.id ";
+    $sql .= "LEFT JOIN patients p ON (pr.patient_id = p.id OR (pr.patient_id IS NULL AND e.patient_id = p.id)) ";
+    $sql .= "LEFT JOIN staff d ON pr.doctor_id = d.id ";
     $sql .= "LEFT JOIN pharmacy_inventory inv ON pr.inventory_id = inv.id ";
     $sql .= "WHERE pr.id = ?";
     
@@ -147,8 +159,8 @@ function dispense_prescription($prescription_id, $pharmacist_id, $quantity, $rem
         
         $sql3 = "INSERT INTO billing (encounter_id, patient_id, billing_category, amount, payment_status, remarks) VALUES (?, ?, ?, ?, 'Pending', ?)";
         $q3 = $db_1->prepare($sql3);
-        $encounter_id = $rx['encounter_id'];
-        $patient_id = $rx['e_patient_id'];
+        $encounter_id = !empty($rx['encounter_id']) ? (int)$rx['encounter_id'] : null;
+        $patient_id = (int)$rx['e_patient_id'];
         $cat = $rx['patient_category'];
         
         $q3->bind_param("iisds", $encounter_id, $patient_id, $cat, $bill_amount, $bill_remarks);
@@ -163,6 +175,39 @@ function dispense_prescription($prescription_id, $pharmacist_id, $quantity, $rem
     }
     
     return true;
+}
+
+/**
+ * Creates and dispenses a direct walk-in or external prescription.
+ */
+function create_walkin_prescription($patient_id, $pharmacist_id, $external_prescriber, $inventory_id, $medication_name, $dosage, $frequency, $duration, $instructions, $quantity = null, $remarks = '') {
+    global $db_1;
+    $p_id = (int)$patient_id;
+    $inv_id = !empty($inventory_id) ? (int)$inventory_id : null;
+    $prescriber = trim($external_prescriber ?: 'External Prescriber / Walk-In');
+    $med = trim($medication_name);
+    if (empty($med) && $inv_id) {
+        $item = get_inventory_item($inv_id);
+        if ($item) $med = $item['drug_name'];
+    }
+    
+    $stmt = $db_1->prepare("INSERT INTO prescriptions (encounter_id, patient_id, doctor_id, external_prescriber, inventory_id, medication_name, dosage, frequency, duration, instructions, status, created_at) VALUES (NULL, ?, NULL, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())");
+    $stmt->bind_param("isisssss", $p_id, $prescriber, $inv_id, $med, $dosage, $frequency, $duration, $instructions);
+    $success = $stmt->execute();
+    $new_rx_id = $db_1->insert_id;
+    $stmt->close();
+
+    if (!$success || !$new_rx_id) return false;
+
+    if ($quantity !== null && (int)$quantity > 0) {
+        dispense_prescription($new_rx_id, $pharmacist_id, (int)$quantity, $remarks, $inv_id);
+    }
+
+    if (function_exists('logAction')) {
+        logAction($pharmacist_id, "Created Walk-In Prescription #{$new_rx_id} for Patient #{$p_id} ({$med})", 'prescription', $new_rx_id);
+    }
+
+    return $new_rx_id;
 }
 
 ?>

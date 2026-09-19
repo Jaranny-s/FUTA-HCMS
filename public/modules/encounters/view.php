@@ -273,12 +273,17 @@ include(SHARED_PATH . '/header.php');
                 <img src="<?php echo $patient_pic; ?>" onerror="this.onerror=null; this.src='<?php echo url_wrap('/assets/images/default_profile_pic.png'); ?>';" alt="" class="workspace-avatar">
                 <div class="details">
                     <h2><?php echo v_wrap($encounter['patient_last'] . ' ' . $encounter['patient_first']); ?> <span style="font-size: 14px; color: #666;">(<?php echo v_wrap($encounter['p_id']); ?>)</span></h2>
-                    <p>
+                    <p style="margin-bottom: 6px;">
                         <strong>Category:</strong> <?php echo v_wrap($encounter['patient_category']); ?> | 
                         <strong>Gender:</strong> <?php echo v_wrap($encounter['gender']); ?> |
                         <strong>DOB:</strong> <?php echo v_wrap($encounter['date_of_birth']); ?> | 
                         <strong>Blood Group:</strong> <?php echo v_wrap($encounter['blood_group']); ?>
                     </p>
+                    <div>
+                        <a href="<?php echo url_wrap('/modules/patients/view.php?id=' . u_wrap($encounter['patient_id'])); ?>" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 4px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 600; text-decoration: none; transition: 0.2s;" onmouseover="this.style.background='#bae6fd'" onmouseout="this.style.background='#e0f2fe'">
+                            <i class="bi bi-file-earmark-medical"></i> View Full Patient Medical File <i class="bi bi-box-arrow-up-right" style="font-size: 0.72rem;"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
             
